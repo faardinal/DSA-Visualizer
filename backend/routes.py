@@ -1,14 +1,14 @@
 """
 Flask routes for the execution API.
-Phase 3.2: Execution tracing with primitive-only serialization.
 """
 from flask import Blueprint, request, jsonify
 import time
 
-from .tracer import execute_python
-from .models import ExecutionConfig
+# Use absolute imports so this module works both when run directly
+# and when imported by gunicorn as part of the backend package.
+from backend.tracer import execute_python
+from backend.models import ExecutionConfig
 
-# Create blueprint
 execution_bp = Blueprint('execution', __name__, url_prefix='/api')
 
 
@@ -36,53 +36,10 @@ def snapshot_to_dict(snapshot) -> dict:
 
 @execution_bp.route('/run', methods=['POST'])
 def run_code():
-    """
-    Execute Python code and return execution trace.
-
-    Request:
-    {
-        "code": "python code string",
-        "inputs": "optional stdin input",
-        "config": {
-            "max_steps": 10000,
-            "max_time_seconds": 30,
-            "max_recursion_depth": 1000
-        }
-    }
-
-    Response (success):
-    {
-        "success": true,
-        "trace": [
-            {
-                "step": 1,
-                "event": "line",
-                "line": 1,
-                "function": "<module>",
-                "code": "x = 5",
-                "locals": {},
-                "globals": {"x": 5},
-                "stdout": ""
-            },
-            ...
-        ]
-    }
-
-    Response (error):
-    {
-        "success": false,
-        "trace": [...],
-        "error": {
-            "type": "ZeroDivisionError",
-            "message": "division by zero",
-            "line": 3
-        }
-    }
-    """
+    """Execute Python code and return execution trace."""
     start_time = time.time()
 
     try:
-        # Validate JSON request
         data = request.get_json(silent=True)
         if not data or not isinstance(data, dict):
             return jsonify({
@@ -92,7 +49,6 @@ def run_code():
                 "error_type": "invalid_request"
             }), 400
 
-        # Get code
         code = data.get('code', '')
         if not code or not isinstance(code, str):
             return jsonify({
@@ -102,7 +58,6 @@ def run_code():
                 "error_type": "invalid_request"
             }), 400
 
-        # Get optional inputs
         inputs = data.get('inputs', '')
         if not isinstance(inputs, str):
             return jsonify({
@@ -112,9 +67,6 @@ def run_code():
                 "error_type": "invalid_request"
             }), 400
 
-        # Get optional config. Unrecognized/malformed config fields fall back
-        # to defaults instead of raising, out-of-range values are clamped by
-        # ExecutionConfig itself.
         config_data = data.get('config') or {}
         if not isinstance(config_data, dict):
             config_data = {}
@@ -124,17 +76,10 @@ def run_code():
             max_recursion_depth=config_data.get('max_recursion_depth', 1000)
         )
 
-        # Execute code
         snapshots, error, exec_time, error_type = execute_python(code, inputs, config)
-
-        # Convert snapshots to dict
         trace = [snapshot_to_dict(s) for s in snapshots]
 
-        # Build response
         if error:
-            # Execution had an error. `error_type` is additive metadata for
-            # the frontend to branch on; `error` remains the human-readable
-            # string for backward compatibility with older clients.
             response = {
                 "success": False,
                 "trace": trace,
@@ -143,7 +88,6 @@ def run_code():
                 "execution_time": exec_time
             }
         else:
-            # Successful execution
             response = {
                 "success": True,
                 "trace": trace,
@@ -164,15 +108,11 @@ def run_code():
 
 @execution_bp.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint."""
-    return jsonify({
-        "status": "ok"
-    })
+    return jsonify({"status": "ok"})
 
 
 @execution_bp.route('/config', methods=['GET'])
 def get_config():
-    """Get default execution configuration."""
     config = ExecutionConfig()
     return jsonify({
         "max_steps": config.max_steps,
