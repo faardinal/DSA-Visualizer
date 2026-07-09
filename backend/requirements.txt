@@ -1,0 +1,3 @@
+# Backend dependencies for DSA Visualization Platform
+flask>=2.3.0
+flask-cors>=4.0.0
