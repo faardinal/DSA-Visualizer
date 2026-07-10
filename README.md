@@ -5,4 +5,5 @@ Full-stack DSA execution visualizer.
 WEB URL: https://visaam.vercel.app/
 
 
-<img width="338" height="237" alt="image" src="https://github.com/user-attachments/assets/8dfb082a-4a68-4386-8873-773bc0ca03c7" />
+<img width="1915" height="898" alt="image" src="https://github.com/user-attachments/assets/849b2f43-17cc-4633-a208-b10f75e5dd13" />
+
