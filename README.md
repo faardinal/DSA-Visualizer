@@ -1,4 +1,5 @@
 # DSA Visualizer
+python only for now
 
 Full-stack DSA execution visualizer.
 
