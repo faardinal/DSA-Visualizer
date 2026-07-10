@@ -1,0 +1,298 @@
+Phase 3 – Universal Python Execution Support
+
+You are continuing work on an existing project. Read this entire prompt carefully before writing code.
+
+Project Overview
+
+This project is a Python Code Execution Visualizer.
+
+Goal:
+
+A user pastes any Python code into the web editor.
+
+The backend executes the code using sys.settrace.
+
+Every executed line generates a snapshot.
+
+The frontend plays those snapshots as an interactive visualization.
+
+The final experience should feel similar to Python Tutor, but with a modern React UI and animated data-structure visualizations.
+
+Current Architecture
+
+Frontend
+
+React
+Vite
+Timeline playback
+Variable panel
+Heap visualization
+Call stack panel
+Output panel
+
+Backend
+
+Flask
+sys.settrace execution engine
+Snapshot generation
+Heap serialization
+REST API
+
+Execution Flow
+
+User Code
+
+↓
+
+ExecutionTracer
+
+↓
+
+Snapshots
+
+↓
+
+API
+
+↓
+
+Frontend
+
+↓
+
+Timeline + Visualizations
+
+Progress So Far
+
+Completed
+
+✓ tracing
+
+✓ line events
+
+✓ return events
+
+✓ exception events
+
+✓ stdout capture
+
+✓ execution limits
+
+✓ recursion protection
+
+✓ heap serialization
+
+✓ stable heap IDs
+
+✓ aliasing
+
+✓ nested objects
+
+✓ circular references
+
+✓ immutable snapshots
+
+✓ backend API
+
+✓ frontend connected to backend
+
+✓ frontend/backend schema adapter
+
+Current focus is NOT fixing heap serialization anymore.
+
+That work is already finished.
+
+Phase 3 Goal
+
+Now the visualizer must support real Python programs, not only simple examples.
+
+The project should execute almost any interview-style Python code without crashing.
+
+If something cannot be visualized, the UI should gracefully fall back to a trace view instead of breaking.
+
+Your Task
+
+First inspect the current implementation.
+
+Understand
+
+backend
+frontend
+visualization pipeline
+renderers
+adapter
+timeline
+playback
+
+After understanding the codebase, identify what prevents arbitrary Python programs from visualizing correctly.
+
+Then create an implementation plan.
+
+After the plan is complete, execute it.
+
+Phase 3 Requirements
+
+Support:
+
+recursion
+nested function calls
+linked lists
+binary trees
+BST
+AVL trees
+graphs
+DFS
+BFS
+stacks
+queues
+heaps
+hash maps
+sets
+tuples
+nested dictionaries
+nested lists
+user-defined classes
+objects referencing other objects
+generators
+iterators
+comprehensions
+recursion
+exceptions
+multiple functions
+global variables
+local variables
+aliasing
+circular references
+mutable updates
+
+If something is impossible to animate,
+
+show
+
+Execution Trace Only
+
+instead of crashing.
+
+Visualization Requirements
+
+Every execution step should correctly update
+
+Variables
+
+Heap
+
+Call Stack
+
+Timeline
+
+Current line
+
+Stdout
+
+Exceptions
+
+Return values
+
+Animations
+
+No panel should disappear because of unsupported data.
+
+Requirements
+
+Do NOT redesign the architecture.
+
+Do NOT rewrite the backend.
+
+Do NOT rewrite the frontend.
+
+Reuse existing code.
+
+Preserve API compatibility.
+
+Keep snapshots immutable.
+
+Keep heap IDs stable.
+
+Do not break Phase 3.3 tests.
+
+Testing
+
+After implementation verify with programs including:
+
+Recursive Fibonacci
+
+Binary Search
+
+Merge Sort
+
+Quick Sort
+
+DFS
+
+BFS
+
+Tree Traversal
+
+Linked List
+
+Queue
+
+Stack
+
+Heap
+
+Graph
+
+Class with nested objects
+
+Circular references
+
+Nested dictionaries
+
+Nested lists
+
+Comprehensions
+
+Generators
+
+Large recursive programs
+
+Programs that raise exceptions
+
+For every test verify:
+
+✓ no crashes
+
+✓ timeline works
+
+✓ variables update
+
+✓ heap updates
+
+✓ call stack updates
+
+✓ stdout updates
+
+✓ exceptions display correctly
+
+Deliverables
+
+When finished provide:
+
+Files modified
+Why each file changed
+Remaining limitations
+Future improvements
+Test results
+Important
+
+Do NOT immediately start editing.
+
+First:
+
+Inspect the entire project.
+Explain your understanding.
+Produce an implementation plan.
+Then execute the plan.
+
+Keep changes incremental and verify after each logical step instead of making one massive refactor.

@@ -1,0 +1,252 @@
+You are continuing work on an existing Python Execution Visualizer project.
+
+IMPORTANT
+
+Read the entire project first.
+
+Do not immediately start editing files.
+
+First inspect the current frontend and backend and verify the complete execution flow.
+
+Then create a plan.
+
+Then execute the plan incrementally.
+
+Project Goal
+
+The application should behave like this:
+
+User opens website
+
+↓
+
+Python editor appears
+
+↓
+
+User writes ANY Python code
+
+↓
+
+Clicks Run
+
+↓
+
+Frontend sends code to backend
+
+↓
+
+Backend executes using ExecutionTracer
+
+↓
+
+Snapshots returned
+
+↓
+
+Frontend automatically loads trace
+
+↓
+
+Timeline starts
+
+↓
+
+Variables update
+
+↓
+
+Heap updates
+
+↓
+
+Call stack updates
+
+↓
+
+Stdout updates
+
+↓
+
+Animations play
+
+↓
+
+User can replay execution infinitely
+
+This entire workflow must work without using mock traces.
+
+Current Situation
+
+The backend execution engine already exists.
+
+The tracer already exists.
+
+The snapshot system already exists.
+
+Heap serialization already exists.
+
+Frontend visualization already exists.
+
+Timeline already exists.
+
+Playback already exists.
+
+However, the application still does not provide a seamless "write code → run → visualize" experience.
+
+Your job is to complete that.
+
+Your Tasks
+Step 1 — Audit the execution flow
+
+Verify every step.
+
+Is there a code editor?
+Does the editor contain Python code?
+Does Run read the editor contents?
+Does Run call /api/run?
+Does backend receive the submitted code?
+Does backend return snapshots?
+Does frontend receive snapshots?
+Are snapshots transformed correctly?
+Are snapshots stored in application state?
+Does playback automatically start?
+Do all visualization panels update?
+
+Document every missing step before making changes.
+
+Step 2 — Build a proper execution pipeline
+
+If missing, implement
+
+editor → Run button
+Run → backend
+backend → snapshots
+snapshots → React state
+React state → playback
+playback → visualization
+
+The application should never require mock data for normal usage.
+
+Step 3 — Remove demo-only behavior
+
+Inspect the project for
+
+mockTrace
+demoMode
+fallback traces
+hardcoded examples
+
+If backend is healthy,
+
+always use the real execution engine.
+
+Demo traces should only be used when explicitly requested.
+
+Step 4 — Improve execution UX
+
+Add
+
+Run button
+Stop button
+Reset button
+Loading spinner
+Running indicator
+Execution finished indicator
+
+Disable Run while execution is in progress.
+
+Step 5 — Error handling
+
+Clearly distinguish
+
+Syntax Error
+Runtime Error
+Timeout
+Step Limit
+Recursion Limit
+Backend Offline
+Invalid Response
+
+Never silently fall back to demo mode.
+
+Always tell the user what happened.
+
+Step 6 — Playback Improvements
+
+After execution
+
+Automatically
+
+load trace
+jump to first step
+enable play
+enable next/previous
+enable speed controls
+enable restart
+Step 7 — Test with real programs
+
+Verify using
+
+print("Hello")
+
+for loop
+
+while loop
+
+functions
+
+recursion
+
+linked list
+
+binary tree
+
+graph DFS
+
+graph BFS
+
+merge sort
+
+quick sort
+
+heapq
+
+collections
+
+user classes
+
+nested dictionaries
+
+exceptions
+
+Everything should execute and visualize correctly.
+
+Constraints
+
+Do NOT redesign the architecture.
+
+Reuse existing backend.
+
+Reuse existing frontend.
+
+Preserve API compatibility.
+
+Do not rewrite the tracer.
+
+Do not break previous phases.
+
+Deliverables
+
+When complete provide
+
+Files modified
+What changed
+Execution flow before
+Execution flow after
+Remaining limitations
+Screenshots or descriptions confirming that a user can now:
+write Python code
+click Run
+watch execution visually
+replay execution

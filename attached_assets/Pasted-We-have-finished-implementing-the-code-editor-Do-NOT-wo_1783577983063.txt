@@ -1,0 +1,242 @@
+We have finished implementing the code editor.
+
+Do NOT work on the editor anymore.
+
+The problem is now inside the execution → visualization pipeline.
+
+Observed behavior:
+
+- Monaco editor is visible.
+- I can type Python code.
+- Clicking Run starts execution.
+- Stop button appears during execution.
+- Run button comes back afterward.
+- Backend does not crash.
+- However:
+
+❌ No visualization appears.
+❌ Timeline stays empty.
+❌ Playback has no steps.
+❌ Variables do not update.
+❌ Heap panel does not update.
+❌ Explanation panel does not update.
+
+This means execution completed but the frontend never consumed the returned trace correctly.
+
+I do NOT want guesses.
+
+Perform a complete end-to-end debugging session.
+
+----------------------------------------------------
+STEP 1
+----------------------------------------------------
+
+Run a simple program.
+
+Example:
+
+print("Hello")
+
+Verify:
+
+POST /api/run
+
+actually returns data.
+
+Print the COMPLETE response.
+
+Do not summarize.
+
+----------------------------------------------------
+STEP 2
+----------------------------------------------------
+
+Trace that response through every layer.
+
+Show exactly where it goes.
+
+For example:
+
+runCode()
+
+↓
+
+adaptBackendTrace()
+
+↓
+
+Workspace.jsx
+
+↓
+
+state update
+
+↓
+
+Timeline
+
+↓
+
+VisualizationCanvas
+
+↓
+
+VariablesPanel
+
+↓
+
+CallStackPanel
+
+↓
+
+Playback
+
+↓
+
+Renderer
+
+Show every function.
+
+Show every transformation.
+
+----------------------------------------------------
+STEP 3
+----------------------------------------------------
+
+At every stage print:
+
+incoming data
+
+outgoing data
+
+shape
+
+length
+
+step count
+
+heap count
+
+locals
+
+globals
+
+Do not assume.
+
+Verify.
+
+----------------------------------------------------
+STEP 4
+----------------------------------------------------
+
+Determine exactly where the data disappears.
+
+Examples:
+
+• API returns empty trace
+
+• Adapter returns []
+
+• Workspace overwrites trace
+
+• Playback resets trace
+
+• VisualizationCanvas ignores it
+
+• Renderer rejects it
+
+• Timeline expects different schema
+
+• diffEngine fails
+
+Find the REAL cause.
+
+----------------------------------------------------
+STEP 5
+----------------------------------------------------
+
+After identifying the root cause,
+
+fix ONLY that issue.
+
+Do NOT rewrite unrelated code.
+
+----------------------------------------------------
+STEP 6
+----------------------------------------------------
+
+Verify with ALL of these:
+
+print("Hello")
+
+a = 5
+b = 10
+print(a+b)
+
+Linked List
+
+Binary Tree
+
+Graph
+
+Queue
+
+Stack
+
+Heap
+
+Recursion
+
+DFS
+
+BFS
+
+Dynamic Programming
+
+Every program must produce:
+
+✓ timeline
+
+✓ playback
+
+✓ variables
+
+✓ heap
+
+✓ call stack
+
+✓ visualization
+
+----------------------------------------------------
+STEP 7
+----------------------------------------------------
+
+If any structure is unsupported,
+
+implement the missing renderer instead of silently failing.
+
+The application should never execute successfully and then show a blank visualization.
+
+Instead:
+
+either
+
+display the visualization
+
+or
+
+show a clear message:
+
+"This data structure is not yet supported."
+
+----------------------------------------------------
+STEP 8
+----------------------------------------------------
+
+After everything works,
+
+list every modified file,
+
+why it changed,
+
+and explain the root cause that prevented visualization.

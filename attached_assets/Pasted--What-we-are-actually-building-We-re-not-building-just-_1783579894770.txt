@@ -1,0 +1,403 @@
+## What we are actually building
+
+We're **not** building just another DSA visualizer.
+
+We're building a **modern Python execution visualization platform** that lets anyone paste Python code and watch the program execute step-by-step, with interactive visualizations of data structures and memory.
+
+Think of it as combining the best parts of:
+
+* Python Tutor
+* Visualgo
+* Thonny debugger
+* VS Code
+* LeetCode visualization
+
+into one web application.
+
+---
+
+# Final Vision
+
+A user should be able to:
+
+1. Open the website.
+2. Paste **any valid Python code**.
+3. Click **Run**.
+4. The backend executes the program safely.
+5. Every execution step is traced.
+6. The frontend animates the execution.
+7. The user can move forward/backward through every step.
+8. Variables, heap, objects, references, stdout and call stack all update live.
+9. Complex data structures get specialized visualizations instead of raw text.
+10. Eventually AI explains each step in plain English.
+
+The goal is that **someone who has never programmed before can understand what every line of Python is doing.**
+
+---
+
+# Current Architecture
+
+```
+User
+   │
+   ▼
+Monaco Editor
+   │
+   ▼
+Run Button
+   │
+   ▼
+Flask Backend
+   │
+ExecutionTracer
+(sys.settrace)
+   │
+Snapshots
+   │
+Heap
+Variables
+Stdout
+Call Stack
+   │
+   ▼
+Frontend Adapter
+   │
+Timeline
+Visualization
+Playback
+Animation
+```
+
+---
+
+# Current Progress
+
+## Phase 1 ✅
+
+Project setup
+
+Frontend
+
+Backend
+
+API
+
+Execution engine
+
+---
+
+## Phase 2 ✅
+
+Python execution
+
+Tracing
+
+Snapshots
+
+Variables
+
+Heap
+
+References
+
+Timeline
+
+Playback
+
+---
+
+## Phase 3 ✅
+
+Frontend connected
+
+Monaco editor
+
+Real code execution
+
+Backend adapter
+
+Visualization works
+
+No more demo-only execution
+
+---
+
+# Phase 4 (Current)
+
+Runs custom Python code
+
+Timeline works
+
+Playback works
+
+Real snapshots displayed
+
+Core execution pipeline complete
+
+---
+
+# Phase 5 (Next)
+
+Now we stop making it "work."
+
+We make it **beautiful.**
+
+---
+
+# Phase 5 Goal
+
+Instead of showing generic JSON...
+
+```
+numbers = [5,3,7]
+```
+
+...we animate
+
+```
+┌───┬───┬───┐
+│ 5 │ 3 │ 7 │
+└───┴───┴───┘
+```
+
+When swapping
+
+```
+5 3 7
+```
+
+↓
+
+```
+3 5 7
+```
+
+the boxes animate.
+
+Not instantly change.
+
+Actually move.
+
+---
+
+Linked list should become
+
+```
+10 ──► 20 ──► 30
+```
+
+instead of
+
+```
+Node(...)
+```
+
+---
+
+Tree should become
+
+```
+      8
+    /   \
+   3     10
+  / \
+ 1   6
+```
+
+---
+
+Graph
+
+```
+A────B
+│    │
+C────D
+```
+
+---
+
+Stack
+
+```
+┌───┐
+│30 │
+├───┤
+│20 │
+├───┤
+│10 │
+└───┘
+```
+
+---
+
+Queue
+
+```
+Front
+
+10 → 20 → 30
+
+Back
+```
+
+---
+
+HashMap
+
+```
+Key     Value
+
+A  → 10
+
+B  → 20
+
+C  → 30
+```
+
+---
+
+Heap
+
+```
+        8
+      /   \
+     5     6
+    / \
+   1   2
+```
+
+---
+
+Reference visualization
+
+```
+a ─────┐
+        ▼
+      [1,2,3]
+        ▲
+b ──────┘
+```
+
+When
+
+```
+a.append(4)
+```
+
+Both update simultaneously.
+
+---
+
+# Phase 5 Deliverables
+
+By the end of Phase 5 the application should:
+
+* detect Python data structures automatically
+* choose the correct renderer
+* animate changes instead of replacing them
+* animate insertions
+* animate deletions
+* animate swaps
+* animate pointer/reference updates
+* animate recursion stack changes
+* highlight modified variables
+* highlight modified heap objects
+* keep timeline perfectly synchronized
+
+At this point the project will already be significantly more capable than many educational visualizers because it will combine execution tracing with rich, animated, data-structure-aware rendering.
+
+---
+
+# Prompt for Replit Agent — Phase 5
+
+```
+We have completed the execution engine and frontend integration.
+
+The application now executes real Python code through the backend and visualizes execution snapshots.
+
+DO NOT modify the execution engine or tracing logic unless absolutely necessary.
+
+Our objective is now Phase 5: Rich Data Structure Visualization.
+
+Before making any edits:
+
+1. Audit every visualization component under src/components/renderers, src/components/canvas, src/lib, and related visualization files.
+
+2. Identify:
+   - how each renderer currently receives data
+   - which data structures are already supported
+   - what animations already exist
+   - what renderer is selected for each snapshot
+   - missing renderers
+   - duplicate logic
+   - performance issues
+   - TODO/FIXME comments
+
+3. Produce a detailed implementation plan before changing code.
+
+After the audit, implement Phase 5.
+
+Requirements:
+
+• Arrays should render as animated boxes.
+• Stack should render vertically.
+• Queue should render horizontally.
+• Linked Lists should render as connected nodes with arrows.
+• Binary Trees should render hierarchically.
+• Graphs should render as nodes and edges.
+• HashMaps/Dictionaries should render as key-value tables.
+• Heaps should render as binary trees.
+• Sets should have a dedicated visualization.
+• Tuples should have a distinct visualization from lists.
+
+Animations:
+
+• animate swaps
+• animate insertions
+• animate deletions
+• animate pushes/pops
+• animate enqueue/dequeue
+• animate pointer/reference changes
+• animate object creation/destruction
+• animate tree traversal highlights
+• animate graph traversal highlights
+
+Variable panel:
+
+• highlight changed variables
+• highlight changed values
+• highlight changed references
+
+Heap panel:
+
+• highlight changed objects
+• show reference arrows
+• clearly display aliasing
+
+Timeline:
+
+• remain synchronized with every animation
+• stepping forward/backward must restore the exact visual state
+
+Performance:
+
+• avoid unnecessary rerenders
+• use React memoization where appropriate
+• keep animations smooth for large traces
+
+Do NOT redesign the application.
+
+Reuse the existing visualization architecture.
+
+Maintain backward compatibility with existing traces.
+
+When finished:
+
+1. Verify every supported data structure.
+2. Run several custom Python programs.
+3. Confirm playback still works.
+4. Explain every modified file and why it changed.
+5. List any remaining limitations for Phase 6.
+```
+
+This phase is about transforming your project from a functional execution tracer into a polished, intuitive visual learning tool with rich animations and specialized renderers.

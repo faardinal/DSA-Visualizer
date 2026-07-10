@@ -1,0 +1,148 @@
+We have COMPLETED Phase 3.3.
+
+Current status:
+
+✅ Phase 3.2: 8/8 tests passing
+✅ Phase 3.3: 6/6 tests passing
+
+DO NOT MODIFY ANY FILES.
+
+This task is PLANNING ONLY.
+
+I want you to fully understand the project before writing another line of code.
+
+Your job is to inspect the ENTIRE project and produce a detailed implementation plan for the remaining phases.
+
+Read:
+
+- README
+- Project documentation
+- Assignment instructions
+- Roadmap
+- TODO comments
+- Backend tests
+- Frontend tests
+- Existing architecture
+- API routes
+- Models
+- Frontend components
+- Any planning documents
+
+Then produce a COMPLETE PROJECT ROADMAP.
+
+The roadmap should contain:
+
+# 1. Current Progress
+
+Which phases are already complete?
+Why do you believe they are complete?
+What evidence (tests/files/features) supports that?
+
+--------------------------------------------------
+
+# 2. Remaining Phases
+
+List every remaining phase in order.
+
+For each phase provide:
+
+- Phase number
+- Objective
+- Features to implement
+- Files likely to change
+- Backend changes
+- Frontend changes
+- API changes
+- Data model changes
+- Complexity (Small / Medium / Large)
+- Estimated implementation time
+
+--------------------------------------------------
+
+# 3. Dependencies
+
+Explain:
+
+Which phases depend on earlier phases?
+
+Which phases can be implemented independently?
+
+Which phases are risky?
+
+--------------------------------------------------
+
+# 4. Test Plan
+
+For every remaining phase:
+
+Which tests exist?
+
+What new tests will need to pass?
+
+Which old tests must still pass?
+
+--------------------------------------------------
+
+# 5. Recommended Order
+
+Recommend the safest order for implementation.
+
+Break every remaining phase into very small milestones.
+
+Example:
+
+Phase 3.4
+
+Step 1
+Step 2
+Step 3
+Step 4
+
+instead of one huge task.
+
+--------------------------------------------------
+
+# 6. Risk Analysis
+
+For each remaining phase identify:
+
+Possible regressions
+
+Performance risks
+
+API compatibility risks
+
+Frontend risks
+
+Backend risks
+
+--------------------------------------------------
+
+# 7. Credit Optimization Plan
+
+Since I only have about 32% Replit Agent credits remaining:
+
+Recommend which tasks should be done by the Agent.
+
+Recommend which tasks can be done manually.
+
+Recommend which tasks should be postponed.
+
+Estimate approximately how many agent iterations each phase will require.
+
+--------------------------------------------------
+
+IMPORTANT RULES
+
+DO NOT:
+
+- modify files
+- generate patches
+- refactor code
+- optimize code
+- remove dead code
+- start implementing Phase 3.4
+
+ONLY inspect, analyze, and produce a comprehensive implementation plan.
+
+The goal is to understand the remaining work before writing any code.

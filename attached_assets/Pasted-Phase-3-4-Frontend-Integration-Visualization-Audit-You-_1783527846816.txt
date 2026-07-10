@@ -1,0 +1,324 @@
+Phase 3.4 – Frontend Integration & Visualization Audit
+
+You are joining an existing project in the middle of development.
+
+Project Overview
+
+This project is a Python Data Structure & Algorithm Visualizer, similar to Python Tutor.
+
+Architecture:
+
+React + Vite frontend
+        │
+        │ POST /api/run
+        ▼
+Flask Backend
+        │
+ExecutionTracer
+(sys.settrace)
+        │
+Snapshots
+        ▼
+JSON Response
+        ▼
+React Visualization
+
+The backend executes Python code using sys.settrace, captures execution step-by-step, and returns snapshots that the frontend animates.
+
+Current Project Status
+Phase 3.1 ✅ COMPLETE
+
+Execution tracing.
+
+Implemented:
+
+line events
+call events
+return events
+exception events
+stdout capture
+locals
+globals
+call stack
+Phase 3.2 ✅ COMPLETE
+
+Execution API.
+
+Implemented:
+
+/api/run
+/api/health
+/api/config
+
+Execution limits:
+
+max steps
+timeout
+recursion limit
+
+All tests pass.
+
+Phase 3.3 ✅ COMPLETE
+
+Heap serialization.
+
+Implemented:
+
+heap references
+stable heap IDs
+aliasing
+nested objects
+circular references
+immutable snapshots
+
+All backend tests pass.
+
+Do NOT modify heap serialization unless you discover an actual bug.
+
+IMPORTANT
+
+We are NOT working on:
+
+sandbox
+security
+performance optimization
+serializer refactoring
+cleanup
+dead code removal
+
+Those are future milestones.
+
+The backend should be treated as stable.
+
+Goal
+
+Start Phase 3.4.
+
+This phase is entirely about making sure the frontend fully utilizes the backend trace.
+
+Do NOT redesign anything yet.
+
+First inspect everything.
+
+Step 1 — Backend Contract
+
+Inspect the JSON returned by /api/run.
+
+Document every field.
+
+For example:
+
+success
+trace
+execution_time
+stdout
+error
+
+Then inspect each snapshot.
+
+Document every snapshot field.
+
+For example:
+
+step
+line
+event
+locals
+globals
+heap
+call_stack
+stdout
+exception
+execution_time
+
+Create a complete contract.
+
+Step 2 — Frontend Audit
+
+Inspect the entire frontend.
+
+Find:
+
+src/lib/runCode.js
+
+src/lib/diffEngine.js
+
+src/pages
+
+src/components
+
+Visualization components
+
+Timeline
+
+Playback
+
+Heap components
+
+Variable panel
+
+Call stack panel
+
+Explain:
+
+what each component does
+how data flows
+where backend data enters
+where snapshots are transformed
+where playback happens
+
+Do NOT edit anything.
+
+Step 3 — Usage Matrix
+
+Create a table.
+
+For every backend field answer:
+
+Backend Field
+
+↓
+
+Used?
+
+↓
+
+Where?
+
+↓
+
+Displayed?
+
+↓
+
+Animated?
+
+↓
+
+Missing?
+
+Example:
+
+Backend Field	Used	Displayed	Animated	File
+locals	Yes	Yes	Yes	VariablesPanel
+globals	Yes	Yes	No	VariablesPanel
+heap	Partial	Partial	No	???
+stdout	No	No	No	Missing
+
+I want a COMPLETE matrix.
+
+Step 4 — Missing Features
+
+Find every feature the backend already supports but the frontend ignores.
+
+Examples:
+
+Heap visualization
+
+Call stack animation
+
+Exception display
+
+Stdout console
+
+Function entry animation
+
+Function return animation
+
+Line highlighting
+
+Variable change highlighting
+
+Timeline improvements
+
+Playback improvements
+
+Execution statistics
+
+Anything else.
+
+Rank them:
+
+Critical
+
+High
+
+Medium
+
+Low
+
+Step 5 — Bug Audit
+
+Find frontend bugs.
+
+Examples:
+
+Incorrect rendering
+
+Unused backend fields
+
+Broken playback
+
+Timeline bugs
+
+State bugs
+
+Animation glitches
+
+Anything that doesn't correctly represent backend data.
+
+Do NOT fix them yet.
+
+Step 6 — Phase 3.4 Roadmap
+
+After inspection create a roadmap.
+
+Break Phase 3.4 into small milestones.
+
+Example:
+
+Phase 3.4.1
+
+Display stdout.
+
+Phase 3.4.2
+
+Improve heap visualization.
+
+Phase 3.4.3
+
+Animate call stack.
+
+Phase 3.4.4
+
+Highlight changed variables.
+
+Phase 3.4.5
+
+Improve playback controls.
+
+Each milestone should include:
+
+objective
+files affected
+estimated complexity
+dependencies
+risks
+testing strategy
+Step 7 — Wait
+
+After completing the inspection and roadmap,
+
+STOP.
+
+Do NOT write code yet.
+
+Do NOT refactor.
+
+Do NOT optimize.
+
+Do NOT clean dead code.
+
+Do NOT implement sandbox.
+
+Wait for approval before implementing Phase 3.4.
