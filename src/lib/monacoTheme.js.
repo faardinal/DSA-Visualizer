@@ -1,0 +1,77 @@
+// Shared Monaco theme + editor option helpers.
+//
+// Both the editable left editor (CodeEditor.jsx) and the read-only CODE tab
+// viewer (CodeViewerPanel.jsx) derive from these, so the two panels stay
+// visually consistent and the theme is only ever defined once.
+//
+// `defineThemes` is idempotent: defining a theme that already exists is a
+// no-op in Monaco, so it is safe to call from every editor's onMount.
+
+const THEME_DARK = "dsa-dark";
+const THEME_LIGHT = "dsa-light";
+
+function defineThemes(monaco) {
+  monaco.editor.defineTheme(THEME_DARK, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#161618",
+      "editor.foreground": "#EBEBEB",
+      "editorLineNumber.foreground": "#5A5A5E",
+      "editorLineNumber.activeForeground": "#EBEBEB",
+      "editor.lineHighlightBackground": "#FFFFFF08",
+      "editorCursor.foreground": "#007AFF",
+      "editor.selectionBackground": "#007AFF33",
+      "editorIndentGuide.background": "#2A2A2C",
+      "editorIndentGuide.activeBackground": "#3A3A3C",
+      "editorGutter.background": "#161618",
+    },
+  });
+
+  monaco.editor.defineTheme(THEME_LIGHT, {
+    base: "vs",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#EDEDEF",
+      "editor.foreground": "#1D1D1F",
+      "editorLineNumber.foreground": "#AEAEB2",
+      "editorLineNumber.activeForeground": "#1D1D1F",
+      "editor.lineHighlightBackground": "#00000006",
+      "editorCursor.foreground": "#007AFF",
+      "editor.selectionBackground": "#007AFF33",
+      "editorIndentGuide.background": "#D5D5DA",
+      "editorGutter.background": "#EDEDEF",
+    },
+  });
+}
+
+function themeName(theme) {
+  return theme === "dark" ? THEME_DARK : THEME_LIGHT;
+}
+
+// Base editor options shared between the editable editor and the read-only
+// viewer. Callers may spread additional options on top (e.g. readOnly).
+export const BASE_EDITOR_OPTIONS = {
+  fontFamily: "SF Mono, ui-monospace, Menlo, monospace",
+  fontSize: 13,
+  lineHeight: 20,
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  tabSize: 4,
+  padding: { top: 12 },
+  renderLineHighlight: "line",
+  overviewRulerLanes: 1,
+  hideCursorInOverviewRuler: false,
+  overviewRulerBorder: false,
+  glyphMargin: true,
+  scrollbar: {
+    verticalScrollbarSize: 4,
+    horizontalScrollbarSize: 4,
+  },
+  fontLigatures: true,
+};
+
+export { defineThemes, themeName };

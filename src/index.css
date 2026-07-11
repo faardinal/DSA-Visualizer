@@ -98,6 +98,47 @@
   }
 }
 
+/* ─── Monaco decoration classes ──────────────────────────────────────────
+   Shared between the editable left editor (CodeEditor) and the read-only
+   CODE viewer (CodeViewerPanel). Kept in global CSS so neither component
+   needs an injected <style> block, and the rules win over Monaco's own
+   without !important on every property. */
+
+/* Breakpoint line tint + glyph margin dot (red, VS Code style) */
+.bp-line-highlight {
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+.bp-glyph {
+  background: radial-gradient(circle at 50% 50%, #ef4444 55%, transparent 56%);
+  width: 10px !important;
+  margin-left: 3px;
+}
+
+/* Active execution line (blue, VS Code "current statement" style):
+   subtle background + left border + gutter arrow glyph. No animation. */
+.dsa-active-line {
+  background: rgba(0, 122, 255, 0.14) !important;
+  box-shadow: inset 2px 0 0 #007aff;
+}
+.dsa-active-glyph {
+  background: #007aff;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  width: 6px !important;
+  margin-left: 5px;
+}
+
+/* Exception variant of the active line — red, signals an error frame. */
+.dsa-active-line-exception {
+  background: rgba(239, 68, 68, 0.18) !important;
+  box-shadow: inset 2px 0 0 #ef4444;
+}
+.dsa-active-glyph-exception {
+  background: #ef4444;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  width: 6px !important;
+  margin-left: 5px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

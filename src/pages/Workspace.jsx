@@ -251,6 +251,7 @@ export default function Workspace() {
               breakpoints={playback.breakpoints}
               onToggleBreakpoint={playback.toggleBreakpoint}
               events={events}
+              theme={theme}
             />
           </Panel>
         </PanelGroup>
