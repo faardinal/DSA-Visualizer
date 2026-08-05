@@ -7,6 +7,8 @@ export default function TitleBar({
   isRunning,
   runStatus = "idle",
   demoMode,
+  leetCodeMode,
+  problemTitle,
   theme,
   onToggleTheme,
   examples = [],
@@ -56,6 +58,11 @@ export default function TitleBar({
         {demoMode && (
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
             Demo mode
+          </span>
+        )}
+        {leetCodeMode && (
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/15 text-primary">
+            LeetCode{problemTitle ? ` · ${problemTitle}` : ""}
           </span>
         )}
         {!isRunning && runStatus === "success" && (

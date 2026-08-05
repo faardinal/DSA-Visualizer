@@ -8,6 +8,7 @@ import time
 # and when imported by gunicorn as part of the backend package.
 from backend.tracer import execute_python
 from backend.models import ExecutionConfig
+from backend.execution_engine import run_solution, get_registry
 
 execution_bp = Blueprint('execution', __name__, url_prefix='/api')
 
@@ -119,3 +120,70 @@ def get_config():
         "max_time_seconds": config.max_time_seconds,
         "max_recursion_depth": config.max_recursion_depth
     })
+
+
+@execution_bp.route('/run-solution', methods=['POST'])
+def run_solution_endpoint():
+    """Execute a LeetCode-style solution with auto-detection and test validation."""
+    start_time = time.time()
+    try:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({
+                "success": False,
+                "error": "Invalid JSON request",
+                "error_type": "invalid_request"
+            }), 400
+
+        code = data.get('code', '')
+        if not code or not isinstance(code, str):
+            return jsonify({
+                "success": False,
+                "error": "No code provided",
+                "error_type": "invalid_request"
+            }), 400
+
+        problem_id = data.get('problem_id')
+        method_name = data.get('method')
+        replay_test_idx = data.get('replay_test_idx')
+
+        config_data = data.get('config') or {}
+        if not isinstance(config_data, dict):
+            config_data = {}
+        config = ExecutionConfig(
+            max_steps=config_data.get('max_steps', 10000),
+            max_time_seconds=config_data.get('max_time_seconds', 30.0),
+            max_recursion_depth=config_data.get('max_recursion_depth', 1000)
+        )
+
+        result = run_solution(
+            source_code=code,
+            problem_id=problem_id,
+            method_name=method_name,
+            replay_test_idx=replay_test_idx,
+            config=config,
+        )
+
+        return jsonify(result.to_dict())
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}",
+            "error_type": "server_error",
+            "execution_time": time.time() - start_time
+        }), 500
+
+
+@execution_bp.route('/problems', methods=['GET'])
+def list_problems():
+    """List all registered problem plugins."""
+    try:
+        problems = get_registry().list_problem_dicts()
+        return jsonify({"success": True, "problems": problems})
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}",
+            "error_type": "server_error"
+        }), 500

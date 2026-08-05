@@ -1,9 +1,9 @@
 """
 Backend package initialization.
-Phase 3.2: Execution tracing with primitive-only serialization.
 """
 from .models import ExecutionConfig
 from .tracer import ExecutionTracer, execute_python, Snapshot, serialize_value
+from .execution_engine import run_solution, get_registry, list_problems
 
 __all__ = [
     'ExecutionConfig',
@@ -11,4 +11,7 @@ __all__ = [
     'execute_python',
     'Snapshot',
     'serialize_value',
+    'run_solution',
+    'get_registry',
+    'list_problems',
 ]

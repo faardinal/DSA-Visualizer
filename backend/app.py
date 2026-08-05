@@ -39,7 +39,9 @@ def create_app(config=None):
             "endpoints": {
                 "health": "GET /api/health",
                 "run": "POST /api/run",
-                "config": "GET /api/config"
+                "config": "GET /api/config",
+                "run_solution": "POST /api/run-solution",
+                "problems": "GET /api/problems"
             }
         })
 
