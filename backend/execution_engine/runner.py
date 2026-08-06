@@ -12,27 +12,25 @@ It never knows about React, rendering, or the frontend.
 """
 
 import json
+import ast
 import time
 import traceback
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .errors import (
-    EngineError,
     NoSolutionClassError,
     ParseError,
     SecurityViolationError,
-    AmbiguousMethodError,
     classify_error,
 )
-from .parser import parse_source, has_solution_class, ParsedSolution, MethodInfo
+from .parser import parse_source, ParsedSolution, MethodInfo
 from .plugin_base import (
-    ProblemPlugin, ProblemInfo, TestCase, ValidationResult,
+    ProblemPlugin, TestCase, ValidationResult,
 )
-from .plugin_registry import get_registry, PluginRegistry
+from .plugin_registry import get_registry
 from .security import sanitize_source
 from .wrapper_generator import generate_wrapper
-from .validators import validator_for
 
 
 # ---------------------------------------------------------------------------
@@ -465,8 +463,8 @@ def _parse_result_markers(stdout: str) -> tuple:
                     result_value = json.loads(result_str)
                 except (json.JSONDecodeError, ValueError):
                     try:
-                        result_value = eval(result_str)
-                    except Exception:
+                        result_value = ast.literal_eval(result_str)
+                    except (ValueError, SyntaxError):
                         result_value = result_str
             continue
 

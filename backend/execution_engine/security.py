@@ -132,39 +132,3 @@ def _check_forbidden_name(name: str, violations: list, context: str):
         violations.append(f"Forbidden {context}: {name}")
     if name in FORBIDDEN_DUNDERS:
         violations.append(f"Forbidden {context}: {name}")
-
-
-def restricted_globals() -> dict:
-    """
-    Build a restricted __builtins__ dict for use in exec().
-    Removes dangerous builtins while keeping the safe ones needed
-    for normal algorithm execution.
-    """
-    import builtins
-
-    # Allowed builtins for algorithm execution
-    allowed = {
-        "abs", "all", "any", "bin", "bool", "chr", "complex",
-        "dict", "divmod", "enumerate", "filter", "float", "format",
-        "frozenset", "hash", "hex", "id", "int", "isinstance",
-        "issubclass", "iter", "len", "list", "map", "max", "min",
-        "next", "oct", "ord", "pow", "print", "range", "repr",
-        "reversed", "round", "set", "setattr", "slice", "sorted",
-        "str", "sum", "tuple", "type", "zip",
-        "True", "False", "None",
-        "ValueError", "TypeError", "KeyError", "IndexError",
-        "AttributeError", "StopIteration", "RuntimeError",
-        "NotImplementedError", "RecursionError",
-        "ArithmeticError", "OverflowError", "ZeroDivisionError",
-        "AssertionError", "Exception", "BaseException",
-        "Exception", "Exception",
-    }
-
-    safe_builtins = {}
-    for name in allowed:
-        try:
-            safe_builtins[name] = getattr(builtins, name)
-        except AttributeError:
-            pass
-
-    return safe_builtins

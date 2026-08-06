@@ -251,7 +251,7 @@ export default function Workspace() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
       <TitleBar
         onRun={handleRun}
         onStop={handleStop}

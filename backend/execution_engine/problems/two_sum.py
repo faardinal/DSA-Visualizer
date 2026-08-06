@@ -45,7 +45,7 @@ class TwoSumPlugin(ProblemPlugin):
             ),
             TestCase(
                 inputs={"nums": [1, 5, 3, 7, 2, 8], "target": 10},
-                expected=[0, 5],
+                expected=[2, 3],
                 description="Hidden: multiple pairs",
                 is_hidden=True,
             ),
@@ -69,26 +69,30 @@ class TwoSumPlugin(ProblemPlugin):
 
 class TwoSumValidator(Validator):
     """
-    Custom validator for Two Sum: the result is a list of two indices.
-    The order of indices matters (they must correspond to nums[i] + nums[j] == target),
-    but there may be multiple valid answers — we check that the indices produce the target.
+    Validator for Two Sum.
+
+    LeetCode accepts any valid index pair whose values sum to target, but
+    verifying that requires the original (nums, target) inputs which the
+    validator interface doesn't receive. We therefore accept the expected
+    answer OR its reverse — both are correct for the curated test cases,
+    and any other pair is rejected. This is intentionally strict: an
+    arbitrary [0, 1] returned by a stub solution must NOT pass.
     """
 
     def validate(self, actual, expected):
         actual_repr = repr(actual)
         expected_repr = repr(expected)
 
-        # Direct comparison first
+        # Exact match
         if actual == expected:
             return ValidationResult(True, expected_repr, actual_repr)
 
-        # Check that actual is a valid answer even if indices differ
+        # Reversed order of the same expected pair is also valid
         if (isinstance(actual, (list, tuple))
                 and len(actual) == 2
-                and isinstance(actual[0], int)
-                and isinstance(actual[1], int)):
+                and list(actual) == [expected[1], expected[0]]):
             return ValidationResult(True, expected_repr, actual_repr,
-                                     "Different valid answer")
+                                     "Valid answer (reversed order)")
 
         return ValidationResult(False, expected_repr, actual_repr,
-                                 f"Expected two indices, got {actual_repr}")
+                                 f"Expected {expected_repr}, got {actual_repr}")
