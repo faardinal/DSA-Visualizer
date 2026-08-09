@@ -45,7 +45,7 @@ export function defineThemes(monaco) {
     inherit: true,
     rules: [
       { token: "comment", foreground: "6A9955", fontStyle: "italic" },
-      { token: "keyword", foreground: "569CD6" },
+      { token: "keyword", foreground: "808080" },
       { token: "string", foreground: "CE9178" },
       { token: "number", foreground: "B5CEA8" },
       { token: "type", foreground: "4EC9B0" },
