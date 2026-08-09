@@ -15,10 +15,17 @@ from backend.execution_engine.plugin_base import (
 
 class MergeSortedArrayPlugin(ProblemPlugin):
     problem_id = "merge-sorted-array"
+    leetcode_number = 88
+    slug = "merge-sorted-array"
     title = "Merge Sorted Array"
     method_name = "merge"
     difficulty = "Easy"
     pattern = "Two Pointers"
+    topics = ["Array", "Two Pointers", "Sorting"]
+    parameters = ["nums1: List[int]", "m: int", "nums2: List[int]", "n: int"]
+    return_type = "None"
+    mutation_strategy = "nums1"
+    hidden_test_count = 1
     description = (
         "Given two integer arrays nums1 and nums2 sorted in ascending order, "
         "merge nums2 into nums1 as one sorted array in-place."
@@ -81,6 +88,20 @@ class MergeSortedArrayPlugin(ProblemPlugin):
             helpers_str="",
             imports_str="",
         )
+
+    @staticmethod
+    def oracle(inputs):
+        return sorted(inputs["nums1"][:inputs["m"]] + inputs["nums2"][:inputs["n"]])
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        tests = []
+        for _ in range(count):
+            m, n = rng.randint(0, 20), rng.randint(0, 20)
+            left = sorted(rng.randint(-50, 50) for _ in range(m))
+            right = sorted(rng.randint(-50, 50) for _ in range(n))
+            tests.append({"nums1": left + [0] * n, "m": m, "nums2": right, "n": n})
+        return tests
 
 
 IN_PLACE_TEMPLATE = """

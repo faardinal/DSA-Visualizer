@@ -7,7 +7,7 @@ function BreakpointsPanel({ breakpoints, onToggleBreakpoint, code }) {
   const codeLines = (code || "").split("\n");
 
   return (
-    <div className="px-4 py-3 h-full overflow-y-auto">
+    <div className="px-3 py-3">
       <div className="flex items-center gap-1.5 mb-2">
         <Circle className="w-3 h-3 fill-destructive text-destructive" />
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">

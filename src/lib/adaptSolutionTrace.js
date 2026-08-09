@@ -29,6 +29,9 @@ export function adaptSolutionResult(raw) {
     error: raw.error || null,
     errorType: raw.error_type || null,
     executionTime: raw.execution_time ?? raw.total_time ?? null,
+    status: raw.status || null,
+    seed: raw.seed ?? null,
+    sessionId: raw.session_id || raw.trace_id || null,
   };
 }
 

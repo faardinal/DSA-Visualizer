@@ -14,10 +14,72 @@ Captures execution snapshots at each source line with:
 import sys
 import time
 import io
+import builtins
+import os
+import json
+import subprocess
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
 from .models import ExecutionConfig
+
+
+_ALLOWED_RUNTIME_MODULES = {
+    "typing", "collections", "functools", "itertools", "heapq", "bisect",
+    "math", "random", "string", "re", "operator", "copy", "json",
+    "dataclasses", "enum", "abc",
+}
+
+
+def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    """Allow only algorithm-library imports from user and wrapper code."""
+    root = name.split(".", 1)[0]
+    if root not in _ALLOWED_RUNTIME_MODULES:
+        raise ImportError(f"Import of '{name}' is not allowed in submissions")
+    return builtins.__import__(name, globals, locals, fromlist, level)
+
+
+SAFE_BUILTINS = {
+    "__build_class__": builtins.__build_class__,
+    "__import__": _safe_import,
+    "abs": abs, "all": all, "any": any, "bool": bool, "callable": callable,
+    "chr": chr, "dict": dict, "divmod": divmod, "enumerate": enumerate,
+    "filter": filter, "float": float, "format": format, "frozenset": frozenset,
+    "hash": hash, "hasattr": hasattr, "hex": hex, "id": id, "int": int, "isinstance": isinstance,
+    "issubclass": issubclass, "iter": iter, "len": len, "list": list, "map": map,
+    "max": max, "min": min, "next": next, "object": object, "ord": ord,
+    "pow": pow, "print": print, "range": range, "repr": repr, "reversed": reversed,
+    "round": round, "set": set, "slice": slice, "sorted": sorted, "str": str,
+    "sum": sum, "super": super, "tuple": tuple, "type": type, "zip": zip,
+    "classmethod": classmethod, "staticmethod": staticmethod, "property": property,
+    "BaseException": BaseException, "Exception": Exception, "ArithmeticError": ArithmeticError,
+    "AssertionError": AssertionError, "AttributeError": AttributeError,
+    "IndexError": IndexError, "KeyError": KeyError, "LookupError": LookupError,
+    "MemoryError": MemoryError, "NotImplementedError": NotImplementedError,
+    "OverflowError": OverflowError, "RecursionError": RecursionError,
+    "RuntimeError": RuntimeError, "StopIteration": StopIteration, "TypeError": TypeError,
+    "ValueError": ValueError, "ZeroDivisionError": ZeroDivisionError,
+}
+
+
+class OutputLimitExceeded(Exception):
+    pass
+
+
+class CappedStringIO(io.StringIO):
+    """Bound captured output so `print` cannot exhaust worker memory."""
+
+    def __init__(self, limit: int):
+        super().__init__()
+        self.limit = limit
+        self.size = 0
+
+    def write(self, value):
+        self.size += len(value)
+        if self.size > self.limit:
+            raise OutputLimitExceeded(f"Output limit exceeded ({self.limit} characters)")
+        return super().write(value)
 
 
 @dataclass
@@ -116,7 +178,7 @@ class ExecutionTracer:
         self.snapshots: List[Snapshot] = []
         self.step_counter = 0
         self.start_time = 0.0
-        self.stdout_buffer = io.StringIO()
+        self.stdout_buffer = CappedStringIO(self.config.max_output_chars)
         
         # Frame tracking
         self._call_stack: List[Dict] = []  # Stack of {func_name, filename, line, frame_id}
@@ -535,6 +597,7 @@ class ExecutionTracer:
         self._stopped = False
         self._source_code = code
         self._source_lines = code.splitlines()
+        self.stdout_buffer = CappedStringIO(self.config.max_output_chars)
         # Reset stable heap id mapping for this execution
         self._reset_heap()
 
@@ -548,6 +611,8 @@ class ExecutionTracer:
 
         # Set up tracing
         old_trace = sys.gettrace()
+        old_recursion_limit = sys.getrecursionlimit()
+        sys.setrecursionlimit(self.config.max_recursion_depth)
         sys.settrace(self.trace_function)
 
         # Redirect stdout
@@ -565,7 +630,7 @@ class ExecutionTracer:
             global_ns = {
                 '__name__': '__main__',
                 '__doc__': None,
-                '__builtins__': __builtins__,
+                '__builtins__': SAFE_BUILTINS,
             }
             
             # Execute
@@ -573,6 +638,9 @@ class ExecutionTracer:
         except self._StopExecution:
             # Execution stopped by tracer due to limit breach.
             pass
+        except OutputLimitExceeded as e:
+            self._error = str(e)
+            self._error_type = "output_limit"
         except Exception as e:
             if not self._error:
                 self._error = f"Runtime error: {type(e).__name__}: {e}"
@@ -580,6 +648,7 @@ class ExecutionTracer:
         finally:
             # Restore
             sys.settrace(old_trace)
+            sys.setrecursionlimit(old_recursion_limit)
             sys.stdout = old_stdout
             if old_stdin:
                 sys.stdin = old_stdin
@@ -596,3 +665,57 @@ def execute_python(code: str, inputs: str = "", config: Optional[ExecutionConfig
     """
     tracer = ExecutionTracer(config)
     return tracer.execute(code, inputs)
+
+
+def _apply_worker_resource_limits(config: ExecutionConfig) -> None:
+    """Apply OS limits where supported; Windows relies on parent termination."""
+    if os.name == "nt":
+        return
+    try:
+        import resource
+        resource.setrlimit(resource.RLIMIT_AS, (config.max_memory_bytes, config.max_memory_bytes))
+        cpu_seconds = max(1, int(config.max_time_seconds) + 1)
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds))
+    except (ImportError, OSError, ValueError):
+        # The parent still imposes a wall-clock deadline on every platform.
+        pass
+
+
+def execute_isolated_python(code: str, inputs: str = "", config: Optional[ExecutionConfig] = None) -> tuple:
+    """Run untrusted submission code in a killable child process.
+
+    The worker gets a narrow builtin/import surface and no inherited
+    environment. The parent terminates it after the wall-clock deadline,
+    protecting the web worker from loops and C-level work that tracing cannot
+    interrupt promptly.
+    """
+    execution_config = config or ExecutionConfig()
+    worker_payload = json.dumps({"code": code, "inputs": inputs, "config": execution_config.__dict__})
+    creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    worker_environment = {"PYTHONIOENCODING": "utf-8"}
+    process = subprocess.Popen(
+        [sys.executable, "-m", "backend.execution_engine.sandbox_worker"],
+        cwd=os.getcwd(),
+        env=worker_environment,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=creation_flags,
+    )
+    start_time = time.time()
+    timeout = execution_config.max_time_seconds + 0.5
+    try:
+        stdout, stderr = process.communicate(worker_payload, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+        return [], f"Execution time limit exceeded ({execution_config.max_time_seconds}s)", time.time() - start_time, "time_limit"
+    if process.returncode != 0:
+        return [], f"Sandbox worker failed: {stderr.strip() or 'process exited unexpectedly'}", time.time() - start_time, "runtime_error"
+    try:
+        result = json.loads(stdout)
+        snapshots = [SimpleNamespace(**snapshot) for snapshot in result["snapshots"]]
+        return snapshots, result["error"], result["execution_time"], result["error_type"]
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return [], "Sandbox worker produced an invalid response", time.time() - start_time, "runtime_error"

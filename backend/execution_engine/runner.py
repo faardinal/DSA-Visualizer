@@ -13,6 +13,7 @@ It never knows about React, rendering, or the frontend.
 
 import json
 import ast
+import random
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -30,6 +31,7 @@ from .plugin_base import (
 )
 from .plugin_registry import get_registry
 from .security import sanitize_source
+from .session_store import session_store
 from .wrapper_generator import generate_wrapper
 
 
@@ -51,23 +53,35 @@ class TestCaseResult:
     traceback: Optional[str] = None
     execution_time: float = 0.0
     memory_bytes: Optional[int] = None
+    is_hidden: bool = False
+    error_type: Optional[str] = None
     # Internal: snapshots captured for trace extraction (not serialized)
     _snapshots: list = field(default_factory=list, repr=False, compare=False)
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "test_idx": self.test_idx,
-            "description": self.description,
+            "test_id": self.test_idx,
+            "description": self.description if not self.is_hidden else f"Hidden test {self.test_idx + 1}",
             "passed": self.passed,
+            "execution_time": self.execution_time,
+            "memory_bytes": self.memory_bytes,
+            "hidden": self.is_hidden,
+            "error_type": self.error_type,
+        }
+        if self.is_hidden:
+            if self.exception:
+                result["exception"] = "Hidden test execution failed."
+            return result
+        result.update({
             "expected": self.expected,
             "actual": self.actual,
             "input_repr": self.input_repr,
             "console_output": self.console_output,
             "exception": self.exception,
             "traceback": self.traceback,
-            "execution_time": self.execution_time,
-            "memory_bytes": self.memory_bytes,
-        }
+        })
+        return result
 
 
 @dataclass
@@ -110,11 +124,16 @@ class ExecutionResult:
     error: Optional[str] = None
     error_type: Optional[str] = None
     statistics: Optional[ExecutionStats] = None
+    seed: Optional[int] = None
+    session_id: Optional[str] = None
 
     def to_dict(self) -> dict:
+        failed = next((test for test in self.test_results if not test.passed), None)
+        status = _status_for_result(self, failed)
         result = {
             "success": self.error is None and len(self.ambiguous_problems or []) == 0,
             "passed": self.passed,
+            "status": status,
             "test_results": [r.to_dict() for r in self.test_results],
             "statistics": self.statistics.to_dict() if self.statistics else None,
             "method_detected": self.method_detected,
@@ -124,6 +143,12 @@ class ExecutionResult:
             "trace_test_idx": self.trace_test_idx,
             "total_time": self.total_time,
             "execution_time": self.total_time,
+            "passed_tests": self.statistics.passed_tests if self.statistics else 0,
+            "total_tests": self.statistics.total_tests if self.statistics else 0,
+            "failed_test": failed.test_idx if failed else None,
+            "seed": self.seed,
+            "trace_id": self.session_id,
+            "session_id": self.session_id,
         }
         if self.error:
             result["error"] = self.error
@@ -144,6 +169,9 @@ def run_solution(
     problem_id: Optional[str] = None,
     method_name: Optional[str] = None,
     replay_test_idx: Optional[int] = None,
+    seed: Optional[int] = None,
+    session_id: Optional[str] = None,
+    mode: str = "submit",
     config=None,
 ) -> ExecutionResult:
     """
@@ -249,10 +277,18 @@ def run_solution(
             total_time=time.time() - start_time,
         )
 
-    # --- Step 4: Get test cases ---
+    # --- Step 4: Get deterministic test cases ---
     test_cases = []
+    resolved_seed = _normalize_seed(seed)
+    active_session = None
     if plugin:
-        test_cases = plugin.get_test_cases()
+        active_session = session_store.get(session_id, plugin.problem_id)
+        if active_session:
+            test_cases = active_session.test_cases
+            resolved_seed = active_session.seed
+        else:
+            test_cases = plugin.build_test_cases(random.Random(resolved_seed), resolved_seed)
+            active_session = session_store.create(plugin.problem_id, resolved_seed, test_cases)
     else:
         # Generate basic tests from type hints
         test_cases = _generate_basic_tests(method)
@@ -265,7 +301,8 @@ def run_solution(
         )
 
     # --- Step 5: Execute each test case ---
-    validator = plugin.get_validator() if plugin else None
+    validator = plugin.get_definition().validator if plugin else None
+    validator = validator or (plugin.get_validator() if plugin else None)
     test_results = []
     all_traces = []  # (test_idx, snapshots)
     passed_count = 0
@@ -316,6 +353,8 @@ def run_solution(
         trace=trace,
         trace_test_idx=trace_idx,
         statistics=stats,
+        seed=resolved_seed,
+        session_id=active_session.session_id if active_session else None,
     )
 
 
@@ -357,6 +396,8 @@ def _execute_single_test(
             exception=f"Wrapper generation error: {e}",
             traceback=traceback.format_exc(),
             execution_time=time.time() - exec_start,
+            is_hidden=test_case.is_hidden,
+            error_type="wrapper_error",
         )
 
     # Execute via the existing tracer
@@ -366,8 +407,8 @@ def _execute_single_test(
     stdout_content = ""
 
     try:
-        from backend.tracer import execute_python
-        snapshots, exec_error, exec_time, exec_error_type = execute_python(
+        from backend.tracer import execute_isolated_python
+        snapshots, exec_error, exec_time, exec_error_type = execute_isolated_python(
             wrapper_code, "", config
         )
         # Collect stdout from last snapshot
@@ -383,6 +424,8 @@ def _execute_single_test(
             exception=message,
             traceback=traceback.format_exc(),
             execution_time=time.time() - exec_start,
+            is_hidden=test_case.is_hidden,
+            error_type=error_type,
         )
 
     exec_time = time.time() - exec_start
@@ -400,6 +443,8 @@ def _execute_single_test(
             console_output=console_output,
             exception=exec_error,
             execution_time=exec_time,
+            is_hidden=test_case.is_hidden,
+            error_type=exec_error_type,
         )
 
     # Parse __RESULT__ from stdout
@@ -414,7 +459,7 @@ def _execute_single_test(
 
     if validator and result_value is not None:
         try:
-            validation: ValidationResult = validator.validate(result_value, expected)
+            validation: ValidationResult = _validate(validator, result_value, expected, test_case.inputs)
             passed = validation.passed
         except Exception as e:
             passed = False
@@ -430,6 +475,8 @@ def _execute_single_test(
         input_repr=test_case.input_repr(),
         console_output=console_output,
         execution_time=exec_time,
+        is_hidden=test_case.is_hidden,
+        error_type=None if passed else "wrong_answer",
     )
 
     # Store snapshots on the result object for later trace extraction
@@ -537,6 +584,42 @@ def _build_stats(test_results: list, runtimes: list) -> ExecutionStats:
         worst_runtime=round(worst, 6),
         fastest_runtime=round(fastest, 6),
     )
+
+
+def _validate(validator, actual, expected, inputs: dict) -> ValidationResult:
+    """Support both legacy validators and input-aware LeetCode validators."""
+    try:
+        return validator.validate(actual, expected, inputs=inputs)
+    except TypeError:
+        return validator.validate(actual, expected)
+
+
+def _normalize_seed(seed: Optional[int]) -> int:
+    try:
+        return int(seed) if seed is not None else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def _status_for_result(result: ExecutionResult, failed: Optional[TestCaseResult]) -> str:
+    if result.error:
+        mapping = {
+            "parse_error": "COMPILATION_ERROR",
+            "no_solution": "METHOD_ERROR",
+            "method_not_found": "METHOD_ERROR",
+            "security_violation": "SECURITY_VIOLATION",
+            "plugin_not_found": "PROBLEM_NOT_FOUND",
+        }
+        return mapping.get(result.error_type, "RUNTIME_ERROR")
+    if result.passed:
+        return "ACCEPTED"
+    if failed and failed.error_type in {"time_limit", "step_limit"}:
+        return "TIME_LIMIT_EXCEEDED"
+    if failed and failed.error_type in {"memory_limit"}:
+        return "MEMORY_LIMIT_EXCEEDED"
+    if failed and failed.exception:
+        return "RUNTIME_ERROR"
+    return "WRONG_ANSWER"
 
 
 def _snapshot_to_dict(snapshot) -> dict:

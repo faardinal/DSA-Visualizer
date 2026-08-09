@@ -103,7 +103,7 @@ def build_binary_tree(items: list) -> TreeNode:
         \\
          4
     """
-    if not items:
+    if not items or items[0] is None:
         return None
 
     root = TreeNode(items[0])
@@ -193,9 +193,7 @@ def serialize_trie(root: TrieNode) -> list:
     """Serialize a trie back to a list of words via DFS."""
     if root is None:
         return []
-    words = []
-    _collect_words(root, "")
-    return words
+    return _collect_words(root, "")
 
 
 def _collect_words(node: TrieNode, prefix: str, words: list = None):
@@ -268,17 +266,19 @@ def build_value(type_name: str, raw_value):
     if raw_value is None:
         return None
 
-    if type_name == "ListNode":
+    normalized_type = type_name.replace("Optional[", "").replace("]", "")
+
+    if normalized_type == "ListNode":
         if isinstance(raw_value, list):
             return build_linked_list(raw_value)
         return raw_value
 
-    if type_name == "TreeNode":
+    if normalized_type == "TreeNode":
         if isinstance(raw_value, list):
             return build_binary_tree(raw_value)
         return raw_value
 
-    if type_name == "TrieNode":
+    if normalized_type == "TrieNode":
         if isinstance(raw_value, list):
             return build_trie(raw_value)
         return raw_value
@@ -389,6 +389,22 @@ def serialize_binary_tree(root):
     while result and result[-1] is None:
         result.pop()
     return result
+'''
+
+TRIE_NODE_HELPERS = '''
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+
+def build_trie(words):
+    root = TrieNode()
+    for word in words or []:
+        node = root
+        for char in word:
+            node = node.children.setdefault(char, TrieNode())
+        node.is_end = True
+    return root
 '''
 
 GRAPH_HELPERS = '''

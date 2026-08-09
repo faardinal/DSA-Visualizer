@@ -11,10 +11,16 @@ from backend.execution_engine.plugin_base import (
 
 class ValidParenthesesPlugin(ProblemPlugin):
     problem_id = "valid-parentheses"
+    leetcode_number = 20
+    slug = "valid-parentheses"
     title = "Valid Parentheses"
     method_name = "isValid"
     difficulty = "Easy"
     pattern = "Stack"
+    topics = ["String", "Stack"]
+    parameters = ["s: str"]
+    return_type = "bool"
+    hidden_test_count = 3
     description = (
         "Given a string s containing just the characters '(', ')', '{', '}', "
         "'[' and ']', determine if the input string is valid."
@@ -68,6 +74,23 @@ class ValidParenthesesPlugin(ProblemPlugin):
 
     def get_validator(self):
         return EqualityValidator()
+
+    @staticmethod
+    def oracle(inputs):
+        pairs = {")": "(", "]": "[", "}": "{"}
+        stack = []
+        for char in inputs["s"]:
+            if char in pairs:
+                if not stack or stack.pop() != pairs[char]:
+                    return False
+            else:
+                stack.append(char)
+        return not stack
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        alphabet = "()[]{}"
+        return [{"s": "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 50)))} for _ in range(count)]
 
 
 class EqualityValidator(Validator):

@@ -7,7 +7,7 @@ function HeapPanel({ snapshot, events }) {
   const heap = (snapshot?.heap || []).filter((o) => !SKIP_TYPES.has(o.type));
 
   return (
-    <div className="px-4 py-3 h-full overflow-y-auto">
+    <div className="px-3 py-3">
       <div className="flex items-center gap-1.5 mb-2">
         <Database className="w-3 h-3 text-muted-foreground/60" />
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">

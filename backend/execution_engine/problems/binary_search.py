@@ -14,10 +14,16 @@ from backend.execution_engine.plugin_base import (
 
 class BinarySearchPlugin(ProblemPlugin):
     problem_id = "binary-search"
+    leetcode_number = 704
+    slug = "binary-search"
     title = "Binary Search"
     method_name = "search"
     difficulty = "Easy"
     pattern = "Binary Search"
+    topics = ["Array", "Binary Search"]
+    parameters = ["nums: List[int]", "target: int"]
+    return_type = "int"
+    hidden_test_count = 2
     description = (
         "Given an array of integers nums sorted in ascending order and "
         "an integer target, return the index of target. If not found, return -1."
@@ -59,6 +65,22 @@ class BinarySearchPlugin(ProblemPlugin):
 
     def get_validator(self):
         return EqualityValidator()
+
+    @staticmethod
+    def oracle(inputs):
+        try:
+            return inputs["nums"].index(inputs["target"])
+        except ValueError:
+            return -1
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        tests = []
+        for index in range(count):
+            nums = sorted(rng.sample(range(-500, 501), rng.randint(0, 80)))
+            target = nums[rng.randrange(len(nums))] if nums and index % 2 == 0 else rng.randint(600, 700)
+            tests.append({"nums": nums, "target": target})
+        return tests
 
 
 class EqualityValidator(Validator):

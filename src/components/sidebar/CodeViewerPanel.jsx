@@ -156,34 +156,55 @@ export default function CodeViewerPanel({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Current execution info */}
-      <div className="px-3 py-2 border-b border-border bg-sidebar shrink-0">
+      {/* Current execution info — compact dark header */}
+      <div
+        className="px-3 py-2 border-b border-border shrink-0"
+        style={{ background: "hsl(var(--sidebar-background))" }}
+      >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <span
+            className="font-semibold uppercase tracking-wider"
+            style={{ fontSize: "9px", color: "#4A4A4A" }}
+          >
             Execution
           </span>
           {activeBadge && (
-            <span className={`text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded ${activeBadge.cls}`}>
+            <span
+              className={`font-mono font-bold tracking-wider px-1.5 py-0.5 rounded ${activeBadge.cls}`}
+              style={{ fontSize: "8px" }}
+            >
               {activeBadge.label}
             </span>
           )}
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px] font-mono">
-          <span className="text-muted-foreground/60">Function</span>
-          <span className="text-foreground truncate" title={snapshot?.function ?? "—"}>
+        <div
+          className="grid gap-x-3 gap-y-0.5 font-mono"
+          style={{ gridTemplateColumns: "auto 1fr", fontSize: "11px" }}
+        >
+          <span style={{ color: "#4A4A4A" }}>Function</span>
+          <span
+            className="truncate"
+            style={{ color: "#E8E8E8" }}
+            title={snapshot?.function ?? "—"}
+          >
             {snapshot?.function ?? "—"}
           </span>
-          <span className="text-muted-foreground/60">Line</span>
-          <span className={isException ? "text-destructive font-semibold" : "text-foreground"}>
+          <span style={{ color: "#4A4A4A" }}>Line</span>
+          <span
+            style={{
+              color: isException ? "hsl(var(--destructive))" : "#E8E8E8",
+              fontWeight: isException ? 600 : 400,
+            }}
+          >
             {currentLine ?? "—"}
           </span>
-          <span className="text-muted-foreground/60">Event</span>
-          <span className="text-foreground">{snapshot?.event ?? "—"}</span>
+          <span style={{ color: "#4A4A4A" }}>Event</span>
+          <span style={{ color: "#E8E8E8" }}>{snapshot?.event ?? "—"}</span>
         </div>
       </div>
 
       {/* Read-only Monaco viewer */}
-      <div className="flex-1 min-h-0 bg-sidebar">
+      <div className="flex-1 min-h-0" style={{ background: "hsl(var(--canvas))" }}>
         <Editor
           value={code ?? ""}
           language="python"
@@ -195,8 +216,6 @@ export default function CodeViewerPanel({
             domReadOnly: true,
             cursorBlinking: "phase",
             contextmenu: false,
-            // The viewer is for playback only — hide the caret entirely so it
-            // never looks like the user can type here.
             renderLineHighlight: "all",
           }}
         />

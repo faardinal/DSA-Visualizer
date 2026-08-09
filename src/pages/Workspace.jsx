@@ -76,6 +76,8 @@ export default function Workspace() {
   const [problemTitle, setProblemTitle] = useState(null);
   const [ambiguousProblems, setAmbiguousProblems] = useState(null);
   const [replayTestIdx, setReplayTestIdx] = useState(null);
+  const [solutionSessionId, setSolutionSessionId] = useState(null);
+  const [solutionVerdict, setSolutionVerdict] = useState(null);
 
   const playback = usePlayback(trace);
   const { step } = playback;
@@ -114,7 +116,7 @@ export default function Workspace() {
       if (useLeetCode) {
         const result = await runSolution(
           code,
-          { problemId: problemId || undefined, replayTestIdx },
+          { problemId: problemId || undefined, replayTestIdx, sessionId: solutionSessionId || undefined, mode: "submit" },
           { signal: controller.signal }
         );
         if (abortControllerRef.current !== controller) return;
@@ -141,6 +143,8 @@ export default function Workspace() {
           setTestResults(adapted.testResults);
           setSolutionStats(adapted.statistics);
           setProblemTitle(adapted.problemTitle);
+          setSolutionSessionId(adapted.sessionId);
+          setSolutionVerdict(adapted.status);
           setAmbiguousProblems(null);
           setExecutionTime(adapted.executionTime);
           setRunError(adapted.error || "");
@@ -212,6 +216,8 @@ export default function Workspace() {
     setProblemTitle(null);
     setAmbiguousProblems(null);
     setReplayTestIdx(null);
+    setSolutionSessionId(null);
+    setSolutionVerdict(null);
   }, []);
 
   useEffect(() => {
@@ -281,7 +287,7 @@ export default function Workspace() {
             />
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-border hover:bg-primary active:bg-primary transition-colors" />
+          <PanelResizeHandle className="w-px bg-border hover:bg-muted-foreground/20 active:bg-muted-foreground/30 transition-colors cursor-col-resize" />
 
           {/* Center: Visualization + Timeline + (LeetCode) Test Results */}
           <Panel defaultSize={50} minSize={30}>
@@ -291,10 +297,15 @@ export default function Workspace() {
                 <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-sidebar/50 shrink-0">
                   <ProblemSelector
                     selectedId={problemId}
-                    onSelect={(pid) => { setProblemId(pid); setAmbiguousProblems(null); }}
+                    onSelect={(pid) => { setProblemId(pid); setAmbiguousProblems(null); setSolutionSessionId(null); setReplayTestIdx(null); setSolutionVerdict(null); }}
                   />
                   {problemTitle && (
                     <span className="text-[11px] text-muted-foreground truncate">{problemTitle}</span>
+                  )}
+                  {solutionVerdict && (
+                    <span className={`text-[10px] font-semibold ${solutionVerdict === "ACCEPTED" ? "text-emerald-500" : "text-destructive"}`}>
+                      {solutionVerdict.replaceAll("_", " ")}
+                    </span>
                   )}
                 </div>
               )}
@@ -335,7 +346,7 @@ export default function Workspace() {
             </div>
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-border hover:bg-primary active:bg-primary transition-colors" />
+          <PanelResizeHandle className="w-px bg-border hover:bg-muted-foreground/20 active:bg-muted-foreground/30 transition-colors cursor-col-resize" />
 
           {/* Right: Sidebar with tabs */}
           <Panel defaultSize={25} minSize={15}>

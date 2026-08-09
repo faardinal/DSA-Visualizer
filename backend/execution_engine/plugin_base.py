@@ -13,7 +13,7 @@ To add a new problem:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 
 @dataclass
@@ -23,6 +23,8 @@ class TestCase:
     expected: Any          # Expected output (JSON-serializable)
     description: str      # Human-readable description
     is_hidden: bool = False  # Hidden tests are not shown in the UI until run
+    test_id: Optional[str] = None
+    seed: Optional[int] = None
 
     def input_repr(self) -> str:
         """Format inputs for display, e.g. 'nums = [2,7,11,15], target = 9'."""
@@ -86,6 +88,9 @@ class ProblemInfo:
     difficulty: str
     pattern: str
     description: str = ""
+    leetcode_number: Optional[int] = None
+    slug: str = ""
+    topics: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -95,7 +100,42 @@ class ProblemInfo:
             "difficulty": self.difficulty,
             "pattern": self.pattern,
             "description": self.description,
+            "leetcode_number": self.leetcode_number,
+            "slug": self.slug,
+            "topics": self.topics,
         }
+
+
+@dataclass
+class ProblemDefinition:
+    """Complete, data-driven contract for a judged LeetCode problem.
+
+    `generator` receives a dedicated ``random.Random`` instance and returns
+    JSON-like parameter dictionaries or TestCase objects. `oracle` receives a
+    deep-copied parameter dictionary, keeping expected answers independent of
+    the submitted solution.
+    """
+    problem_id: str
+    leetcode_number: int
+    slug: str
+    title: str
+    difficulty: str
+    topics: list[str]
+    method_name: str
+    parameters: list[str]
+    return_type: str
+    description: str
+    examples: list[TestCase] = field(default_factory=list)
+    constraints: str = ""
+    input_schema: dict = field(default_factory=dict)
+    output_schema: dict = field(default_factory=dict)
+    generator: Optional[Callable] = None
+    oracle: Optional[Callable] = None
+    validator: Optional["Validator"] = None
+    serialization: str = "json"
+    mutation_strategy: Optional[str] = None
+    stateful: bool = False
+    hidden_test_count: int = 0
 
 
 class RandomGenerator(ABC):
@@ -164,6 +204,17 @@ class ProblemPlugin(ABC):
     difficulty: str = "Easy"  # Easy, Medium, Hard
     pattern: str = ""         # DSA pattern category
     description: str = ""
+    leetcode_number: Optional[int] = None
+    slug: str = ""
+    topics: list[str] = []
+    parameters: list[str] = []
+    return_type: str = "Any"
+    constraints: str = ""
+    input_schema: dict = {}
+    output_schema: dict = {}
+    serialization: str = "json"
+    mutation_strategy: Optional[str] = None
+    stateful: bool = False
 
     @abstractmethod
     def get_test_cases(self) -> list:
@@ -190,6 +241,60 @@ class ProblemPlugin(ABC):
         """
         return None
 
+    def get_definition(self) -> ProblemDefinition:
+        """Return a complete definition while keeping older plugins valid."""
+        return ProblemDefinition(
+            problem_id=self.problem_id,
+            leetcode_number=self.leetcode_number or 0,
+            slug=self.slug or self.problem_id,
+            title=self.title,
+            difficulty=self.difficulty,
+            topics=list(self.topics),
+            method_name=self.method_name,
+            parameters=list(self.parameters),
+            return_type=self.return_type,
+            description=self.description,
+            examples=[case for case in self.get_test_cases() if not case.is_hidden],
+            constraints=self.constraints,
+            input_schema=dict(self.input_schema),
+            output_schema=dict(self.output_schema),
+            generator=getattr(self, "generate_hidden_inputs", None),
+            oracle=getattr(self, "oracle", None),
+            validator=self.get_validator(),
+            serialization=self.serialization,
+            mutation_strategy=self.mutation_strategy,
+            stateful=self.stateful,
+            hidden_test_count=getattr(self, "hidden_test_count", 0),
+        )
+
+    def build_test_cases(self, rng, seed: int) -> list[TestCase]:
+        """Build deterministic tests and calculate generated expected values.
+
+        Older plugins continue to return their curated tests. New definitions
+        can supply a generator and oracle without duplicating expected outputs.
+        """
+        definition = self.get_definition()
+        tests = list(definition.examples) if definition.generator else list(self.get_test_cases())
+        if definition.generator is None:
+            return tests
+
+        generated = definition.generator(rng, definition.hidden_test_count)
+        for index, generated_case in enumerate(generated):
+            case = generated_case if isinstance(generated_case, TestCase) else TestCase(
+                inputs=generated_case,
+                expected=None,
+                description=f"Hidden test {index + 1}",
+                is_hidden=True,
+            )
+            if definition.oracle is None:
+                raise ValueError(f"Problem '{self.problem_id}' has a generator but no oracle.")
+            case.expected = definition.oracle(case.inputs.copy())
+            case.is_hidden = True
+            case.seed = seed
+            case.test_id = case.test_id or f"generated-{index}"
+            tests.append(case)
+        return tests
+
     def to_info(self) -> ProblemInfo:
         """Return a lightweight ProblemInfo summary."""
         return ProblemInfo(
@@ -199,4 +304,7 @@ class ProblemPlugin(ABC):
             difficulty=self.difficulty,
             pattern=self.pattern,
             description=self.description,
+            leetcode_number=self.leetcode_number,
+            slug=self.slug or self.problem_id,
+            topics=list(self.topics),
         )

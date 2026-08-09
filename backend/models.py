@@ -14,6 +14,7 @@ MIN_TIME_SECONDS, MAX_TIME_SECONDS = 0.5, 60.0
 MIN_RECURSION_DEPTH, MAX_RECURSION_DEPTH = 1, 2000
 MIN_HEAP_OBJECTS, MAX_HEAP_OBJECTS = 1, 100_000
 MIN_OUTPUT_CHARS, MAX_OUTPUT_CHARS = 1, 1_000_000
+MIN_MEMORY_BYTES, MAX_MEMORY_BYTES = 32 * 1024 * 1024, 1024 * 1024 * 1024
 
 
 def _clamp(value, low, high, default):
@@ -32,6 +33,7 @@ class ExecutionConfig:
     max_recursion_depth: int = 1000
     max_heap_objects: int = 50000
     max_output_chars: int = 100000
+    max_memory_bytes: int = 256 * 1024 * 1024
 
     def __post_init__(self):
         # Clamp (rather than reject) so a slightly-out-of-range client value
@@ -42,3 +44,4 @@ class ExecutionConfig:
         self.max_recursion_depth = _clamp(self.max_recursion_depth, MIN_RECURSION_DEPTH, MAX_RECURSION_DEPTH, 1000)
         self.max_heap_objects = _clamp(self.max_heap_objects, MIN_HEAP_OBJECTS, MAX_HEAP_OBJECTS, 50000)
         self.max_output_chars = _clamp(self.max_output_chars, MIN_OUTPUT_CHARS, MAX_OUTPUT_CHARS, 100000)
+        self.max_memory_bytes = _clamp(self.max_memory_bytes, MIN_MEMORY_BYTES, MAX_MEMORY_BYTES, 256 * 1024 * 1024)

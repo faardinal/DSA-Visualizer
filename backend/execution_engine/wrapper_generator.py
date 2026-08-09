@@ -13,8 +13,19 @@ from .parser import ParsedSolution, MethodInfo
 from .plugin_base import ProblemPlugin, TestCase, WrapperTemplate
 from .type_hints import TypeHint, is_node_type, is_collection_type
 from .object_builder import (
-    LIST_NODE_HELPERS, TREE_NODE_HELPERS, GRAPH_HELPERS,
+    LIST_NODE_HELPERS, TREE_NODE_HELPERS, TRIE_NODE_HELPERS, GRAPH_HELPERS,
 )
+
+
+# LeetCode supplies these names to ordinary submissions. Keeping the prelude
+# outside user code lets `List[int]` and common helpers work without imports.
+COMMON_LEETCODE_PRELUDE = """from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from collections import Counter, defaultdict, deque, OrderedDict
+from functools import lru_cache
+from bisect import bisect_left, bisect_right
+import heapq
+import math
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -229,12 +240,14 @@ def generate_wrapper(
     input_repr = test_case.input_repr()
 
     # Select helpers based on types needed
-    imports_str = ""
+    imports_str = COMMON_LEETCODE_PRELUDE
     helpers_str = ""
     if _needs_linked_list(parsed, method):
         helpers_str += LIST_NODE_HELPERS
     if _needs_tree(parsed, method):
         helpers_str += TREE_NODE_HELPERS
+    if any(param.annotation and "TrieNode" in param.annotation.raw for param in method.params):
+        helpers_str += TRIE_NODE_HELPERS
     if _needs_graph(parsed, method):
         helpers_str += GRAPH_HELPERS
 
@@ -270,7 +283,7 @@ def _fill_custom_template(
     replacements = {
         "solution_code": solution_code,
         "helpers": template.helpers_str or "",
-        "imports": template.imports_str or "",
+        "imports": COMMON_LEETCODE_PRELUDE + (template.imports_str or ""),
     }
 
     # Parameter value replacements
@@ -370,6 +383,15 @@ def _is_primitive_param(param) -> bool:
 
 def _value_to_python_repr(value, param=None) -> str:
     """Convert a JSON-like value to a Python literal representation."""
+    if param and param.annotation_str:
+        raw_type = param.annotation_str.replace(" ", "")
+        raw_repr = _value_to_python_repr(value)
+        if "ListNode" in raw_type:
+            return f"build_linked_list({raw_repr})"
+        if "TreeNode" in raw_type:
+            return f"build_binary_tree({raw_repr})"
+        if "TrieNode" in raw_type:
+            return f"build_trie({raw_repr})"
     if value is None:
         return "None"
     if isinstance(value, bool):

@@ -146,14 +146,29 @@ def run_solution_endpoint():
         problem_id = data.get('problem_id')
         method_name = data.get('method')
         replay_test_idx = data.get('replay_test_idx')
+        seed = data.get('seed')
+        session_id = data.get('session_id') or data.get('trace_id')
+        mode = data.get('mode', 'submit')
 
         config_data = data.get('config') or {}
         if not isinstance(config_data, dict):
             config_data = {}
+        # Submission limits are server-owned. The legacy `/api/run` endpoint
+        # remains configurable for teaching demos, but judged code cannot
+        # extend its own CPU budget.
+        requested_config = ExecutionConfig(
+            max_steps=config_data.get('max_steps', 50_000),
+            max_time_seconds=config_data.get('max_time_seconds', 2.0),
+            max_recursion_depth=config_data.get('max_recursion_depth', 1500),
+            max_heap_objects=config_data.get('max_heap_objects', 25_000),
+            max_output_chars=config_data.get('max_output_chars', 20_000),
+        )
         config = ExecutionConfig(
-            max_steps=config_data.get('max_steps', 10000),
-            max_time_seconds=config_data.get('max_time_seconds', 30.0),
-            max_recursion_depth=config_data.get('max_recursion_depth', 1000)
+            max_steps=min(requested_config.max_steps, 50_000),
+            max_time_seconds=min(requested_config.max_time_seconds, 2.0),
+            max_recursion_depth=min(requested_config.max_recursion_depth, 1500),
+            max_heap_objects=min(requested_config.max_heap_objects, 25_000),
+            max_output_chars=min(requested_config.max_output_chars, 20_000),
         )
 
         result = run_solution(
@@ -161,6 +176,9 @@ def run_solution_endpoint():
             problem_id=problem_id,
             method_name=method_name,
             replay_test_idx=replay_test_idx,
+            seed=seed,
+            session_id=session_id,
+            mode=mode,
             config=config,
         )
 

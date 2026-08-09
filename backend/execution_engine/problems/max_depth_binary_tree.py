@@ -15,10 +15,17 @@ from backend.execution_engine.object_builder import (
 
 class MaxDepthBinaryTreePlugin(ProblemPlugin):
     problem_id = "max-depth-binary-tree"
+    leetcode_number = 104
+    slug = "maximum-depth-of-binary-tree"
     title = "Maximum Depth of Binary Tree"
     method_name = "maxDepth"
     difficulty = "Easy"
     pattern = "Tree Traversal"
+    topics = ["Tree", "Depth-First Search", "Breadth-First Search"]
+    parameters = ["root: Optional[TreeNode]"]
+    return_type = "int"
+    serialization = "tree_level_order"
+    hidden_test_count = 2
     description = (
         "Given the root of a binary tree, return its maximum depth "
         "(the number of nodes along the longest path from root to leaf)."
@@ -69,6 +76,39 @@ class MaxDepthBinaryTreePlugin(ProblemPlugin):
             helpers_str=TREE_NODE_HELPERS,
             imports_str="",
         )
+
+    @staticmethod
+    def oracle(inputs):
+        values = inputs["root"]
+        if not values:
+            return 0
+        depth, queue = 0, [values[0]]
+        index = 1
+        while queue:
+            level_size = len(queue)
+            depth += 1
+            for _ in range(level_size):
+                node = queue.pop(0)
+                if node is None:
+                    continue
+                for _ in range(2):
+                    if index < len(values):
+                        child = values[index]
+                        index += 1
+                        if child is not None:
+                            queue.append(child)
+        return depth
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        tests = []
+        for _ in range(count):
+            size = rng.randint(1, 31)
+            values = [rng.randint(-100, 100)]
+            for _ in range(1, size):
+                values.append(None if rng.random() < 0.3 else rng.randint(-100, 100))
+            tests.append({"root": values})
+        return tests
 
 
 TREE_TEMPLATE = """

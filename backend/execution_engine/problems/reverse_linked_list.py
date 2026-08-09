@@ -15,10 +15,17 @@ from backend.execution_engine.object_builder import (
 
 class ReverseLinkedListPlugin(ProblemPlugin):
     problem_id = "reverse-linked-list"
+    leetcode_number = 206
+    slug = "reverse-linked-list"
     title = "Reverse Linked List"
     method_name = "reverseList"
     difficulty = "Easy"
     pattern = "Linked List"
+    topics = ["Linked List", "Recursion"]
+    parameters = ["head: Optional[ListNode]"]
+    return_type = "Optional[ListNode]"
+    serialization = "linked_list"
+    hidden_test_count = 2
     description = (
         "Given the head of a singly linked list, reverse the list "
         "and return the reversed list."
@@ -67,6 +74,14 @@ class ReverseLinkedListPlugin(ProblemPlugin):
             helpers_str=LIST_NODE_HELPERS,
             imports_str="",
         )
+
+    @staticmethod
+    def oracle(inputs):
+        return list(reversed(inputs["head"]))
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        return [{"head": [rng.randint(-100, 100) for _ in range(rng.randint(0, 40))]} for _ in range(count)]
 
 
 LINKED_LIST_TEMPLATE = """

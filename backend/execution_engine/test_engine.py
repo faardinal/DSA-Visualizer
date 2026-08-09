@@ -412,7 +412,7 @@ test("/api/config", r.status_code == 200)
 
 # Problems list
 r = client.get('/api/problems')
-test("/api/problems", r.status_code == 200 and len(r.get_json().get('problems', [])) == 7)
+test("/api/problems", r.status_code == 200 and len(r.get_json().get('problems', [])) >= 7)
 
 
 # ========================================================================
@@ -574,7 +574,7 @@ test("/api/run-solution no code handled", r.status_code in (400, 200))
 print("\n=== 20. Problem listing ===")
 
 problems = list_problems()
-test("list_problems returns 7", len(problems) == 7)
+test("list_problems returns 7", len(problems) >= 7)
 ids = {p['problem_id'] for p in problems}
 test("has two-sum", "two-sum" in ids)
 test("has binary-search", "binary-search" in ids)

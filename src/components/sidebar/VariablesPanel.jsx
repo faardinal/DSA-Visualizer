@@ -12,7 +12,7 @@ function VariablesPanel({ snapshot, variableDiffs = {}, watchedVars, onAddWatch,
   const hasReturn = snapshot.event === "return" && snapshot.returnValue !== undefined;
 
   return (
-    <div className="px-4 py-3 h-full overflow-y-auto">
+    <div className="px-3 py-3">
       <PanelHeader title="Variables" />
       <div className="flex flex-col gap-0.5 mt-2">
         {Object.entries(localVars).map(([name, val]) => (

@@ -7,16 +7,19 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 /**
  * Run a LeetCode-style solution against hidden tests.
  * @param {string} code - Python source containing class Solution
- * @param {object} [opts] - { problemId?, method?, replayTestIdx?, config? }
+ * @param {object} [opts] - { problemId?, method?, replayTestIdx?, seed?, sessionId?, mode?, config? }
  * @param {object} [options] - { signal }
  * @returns {Promise<object>} - { success, passed, test_results, statistics, trace, ... }
  */
 export async function runSolution(code, opts = {}, options = {}) {
-  const { problemId, method, replayTestIdx, config } = opts;
+  const { problemId, method, replayTestIdx, seed, sessionId, mode, config } = opts;
   const body = { code };
   if (problemId) body.problem_id = problemId;
   if (method) body.method = method;
   if (replayTestIdx != null) body.replay_test_idx = replayTestIdx;
+  if (seed != null) body.seed = seed;
+  if (sessionId) body.session_id = sessionId;
+  if (mode) body.mode = mode;
   if (config) body.config = config;
 
   const response = await fetch(`${API_BASE}/api/run-solution`, {

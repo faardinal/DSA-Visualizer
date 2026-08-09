@@ -25,8 +25,9 @@ FORBIDDEN_MODULES = {
 
 # Functions that are forbidden to call
 FORBIDDEN_CALLS = {
-    "eval", "exec", "compile", "__import__",
-    "exit", "quit",
+    "eval", "exec", "compile", "__import__", "open", "input",
+    "globals", "locals", "vars", "dir", "getattr", "setattr", "delattr",
+    "breakpoint", "help", "exit", "quit",
 }
 
 # Dangerous attribute accesses
@@ -35,6 +36,10 @@ FORBIDDEN_DUNDERS = {
     "__subclasses__", "__mro__", "__bases__", "__dict__",
     "__class__", "__init_subclass__", "__setattr__", "__delattr__",
     "__getattribute__", "__reduce__", "__reduce_ex__",
+}
+
+FORBIDDEN_ATTRIBUTES = FORBIDDEN_DUNDERS | {
+    "mro", "register", "__call__", "__new__", "__del__",
 }
 
 # Allow these imports even if they partially match forbidden names
@@ -88,6 +93,15 @@ def sanitize_source(code: str) -> tuple:
                 if full_name not in ALLOWED_IMPORTS:
                     _check_forbidden_name(alias.name, violations, "import")
 
+        # Bare-name references to dangerous dunders (e.g. `__builtins__`).
+        # Reading these as plain names is not caught by the attribute/dot-access
+        # rule below, yet hands the user a handle to restricted runtime objects.
+        # No legitimate LeetCode solution ever reads these names, so blocking
+        # the bare reference is safe and closes a defense-in-depth gap.
+        elif isinstance(node, ast.Name):
+            if node.id in FORBIDDEN_DUNDERS:
+                violations.append(f"Forbidden name reference: {node.id}")
+
         # Function calls
         elif isinstance(node, ast.Call):
             func = node.func
@@ -101,7 +115,7 @@ def sanitize_source(code: str) -> tuple:
 
         # Attribute access on dunder names
         elif isinstance(node, ast.Attribute):
-            if node.attr in FORBIDDEN_DUNDERS:
+            if node.attr in FORBIDDEN_ATTRIBUTES:
                 violations.append(f"Forbidden attribute access: .{node.attr}")
 
     if violations:
@@ -131,4 +145,6 @@ def _check_forbidden_name(name: str, violations: list, context: str):
     if name in FORBIDDEN_MODULES:
         violations.append(f"Forbidden {context}: {name}")
     if name in FORBIDDEN_DUNDERS:
+        violations.append(f"Forbidden {context}: {name}")
+    if name.startswith("__") and name.endswith("__"):
         violations.append(f"Forbidden {context}: {name}")

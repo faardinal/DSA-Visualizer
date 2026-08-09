@@ -16,8 +16,10 @@ export default function TitleBar({
   onSelectExample,
 }) {
   return (
-    <div className="h-10 flex items-center justify-between px-3 bg-titlebar border-b border-border no-select shrink-0">
-      {/* Left: traffic lights */}
+    <div
+      className="h-10 flex items-center justify-between px-3 border-b border-border no-select shrink-0"
+      style={{ background: "hsl(var(--titlebar))" }}
+    >      {/* Left: traffic lights */}
       <div className="flex items-center gap-2 w-40">
         <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
         <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />

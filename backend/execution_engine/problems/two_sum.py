@@ -14,10 +14,17 @@ from backend.execution_engine.plugin_base import (
 
 class TwoSumPlugin(ProblemPlugin):
     problem_id = "two-sum"
+    leetcode_number = 1
+    slug = "two-sum"
     title = "Two Sum"
     method_name = "twoSum"
     difficulty = "Easy"
     pattern = "Hashing"
+    topics = ["Array", "Hash Table"]
+    parameters = ["nums: List[int]", "target: int"]
+    return_type = "List[int]"
+    constraints = "2 <= nums.length <= 10^4; exactly one answer exists."
+    hidden_test_count = 3
     description = (
         "Given an array of integers nums and an integer target, "
         "return indices of the two numbers such that they add up to target."
@@ -66,6 +73,25 @@ class TwoSumPlugin(ProblemPlugin):
     def get_validator(self):
         return TwoSumValidator()
 
+    @staticmethod
+    def oracle(inputs):
+        nums, target = inputs["nums"], inputs["target"]
+        for left in range(len(nums)):
+            for right in range(left + 1, len(nums)):
+                if nums[left] + nums[right] == target:
+                    return [left, right]
+        return []
+
+    @staticmethod
+    def generate_hidden_inputs(rng, count):
+        tests = []
+        for index in range(count):
+            size = rng.randint(2, 30)
+            nums = [rng.randint(-100, 100) for _ in range(size)]
+            left, right = rng.sample(range(size), 2)
+            tests.append({"nums": nums, "target": nums[left] + nums[right]})
+        return tests
+
 
 class TwoSumValidator(Validator):
     """
@@ -79,9 +105,17 @@ class TwoSumValidator(Validator):
     arbitrary [0, 1] returned by a stub solution must NOT pass.
     """
 
-    def validate(self, actual, expected):
+    def validate(self, actual, expected, inputs=None):
         actual_repr = repr(actual)
         expected_repr = repr(expected)
+
+        if inputs and isinstance(actual, (list, tuple)) and len(actual) == 2:
+            nums, target = inputs["nums"], inputs["target"]
+            left, right = actual
+            if (isinstance(left, int) and isinstance(right, int)
+                    and 0 <= left < len(nums) and 0 <= right < len(nums)
+                    and left != right and nums[left] + nums[right] == target):
+                return ValidationResult(True, expected_repr, actual_repr, "Valid index pair")
 
         # Exact match
         if actual == expected:
