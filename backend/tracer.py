@@ -18,11 +18,41 @@ import builtins
 import os
 import json
 import subprocess
+import sysconfig
+import pathlib
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
 from .models import ExecutionConfig
+
+
+# ── Pre-compute stdlib directory set at import time ───────────────────────
+# We resolve every known stdlib path so that typing.py, collections.py,
+# heapq.py, etc. can be detected in O(1) by checking whether their filename
+# starts with one of these prefixes.
+def _build_stdlib_dirs() -> frozenset:
+    dirs = set()
+    for key in ("stdlib", "platstdlib", "purelib", "platlib"):
+        p = sysconfig.get_path(key)
+        if p:
+            dirs.add(os.path.normcase(os.path.normpath(p)))
+    # Also cover the frozen-module dir (Python 3.11+) and the lib directory
+    # that houses 'typing.py' directly.
+    stdlib_parent = os.path.dirname(sysconfig.get_path("stdlib") or "")
+    if stdlib_parent:
+        dirs.add(os.path.normcase(os.path.normpath(stdlib_parent)))
+    return frozenset(dirs)
+
+_STDLIB_DIRS: frozenset = _build_stdlib_dirs()
+
+
+def _is_stdlib_file(filename: str) -> bool:
+    """Return True if *filename* belongs to the Python standard library."""
+    if not filename or filename.startswith("<"):
+        return False
+    norm = os.path.normcase(os.path.normpath(filename))
+    return any(norm.startswith(d) for d in _STDLIB_DIRS)
 
 
 _ALLOWED_RUNTIME_MODULES = {
@@ -204,6 +234,15 @@ class ExecutionTracer:
         self._next_heap_id = 0
         # Reverse mapping: heap id -> actual object (to materialize into snapshots)
         self._heap_objs: Dict[int, Any] = {}
+
+        # ── User-code line-range filter ────────────────────────────────────
+        # When the wrapper source is compiled as '<user_code>', only lines
+        # that fall inside the 'class Solution:' body should become visible
+        # snapshots. Lines in the wrapper harness (main(), imports,
+        # build_linked_list calls, etc.) are silently skipped.
+        # These are set by _compute_solution_range() during execute().
+        self._solution_line_start: int = 0   # first line of class Solution (1-based)
+        self._solution_line_end: int = 0     # last line of the class body (inclusive)
         
 
     def _stop_execution(self, message: str, error_type: str = "runtime_error"):
@@ -219,17 +258,64 @@ class ExecutionTracer:
         return f"# Line {line_no}"
 
     def _should_skip_frame(self, filename: str, func_name: str) -> bool:
-        """Determine if a frame should be skipped (internal/system frames)."""
-        # Skip library frames (but NOT user code which uses <user_code> filename)
+        """Determine if a frame should be skipped (internal/system frames).
+
+        Skipped categories
+        ------------------
+        1. Python stdlib files  (typing.py, collections.py, heapq.py …)
+           Detected by comparing the normalised file path against every
+           known stdlib directory prefix collected at import time.
+
+        2. Third-party / site-packages frames.
+
+        3. The tracer's own frames.
+
+        4. Generic internal frames  (<frozen …>, <string>, …).
+
+        5. Wrapper boilerplate in <user_code>.
+           The wrapper is compiled as '<user_code>' so without this filter
+           `from typing import …`, `def main():`, `build_linked_list(…)` etc.
+           all produce snapshots.  We only keep lines that fall inside the
+           'class Solution:' body, detected once by _compute_solution_range().
+        """
+        # ── 1. Python stdlib ───────────────────────────────────────────────
+        if _is_stdlib_file(filename):
+            return True
+
+        # ── 2. Site-packages / dist-packages ──────────────────────────────
         if 'site-packages' in filename or 'dist-packages' in filename:
             return True
-        # Skip tracer's own frames
+
+        # ── 3. The tracer itself ───────────────────────────────────────────
         if 'tracer.py' in filename:
             return True
-        # Skip built-in frames like <frozen importlib>, <string> (but allow <user_code>)
+
+        # ── 4. Generic <…> tokens (but keep <user_code>) ──────────────────
         if filename.startswith('<') and filename.endswith('>') and filename != '<user_code>':
             return True
+
+        # ── 5. Wrapper boilerplate inside <user_code> ─────────────────────
+        # When a solution line range has been established, every <user_code>
+        # line outside that range belongs to the wrapper harness.
+        if filename == '<user_code>' and self._solution_line_start > 0:
+            # We can't obtain the line number here (it comes from the frame
+            # in the calling site), so we can't filter by line at this point.
+            # Line-level filtering is applied in _handle_line / _handle_call /
+            # _handle_return via _is_user_line().
+            pass
+
         return False
+
+    def _is_user_line(self, filename: str, line_no: int) -> bool:
+        """Return True if this (filename, line_no) is inside the user's Solution class."""
+        if filename != '<user_code>':
+            # Non-user-code files are already gated by _should_skip_frame.
+            # If they reach here (shouldn't normally) treat as user code.
+            return True
+        if self._solution_line_start == 0:
+            # No range computed (e.g. free-form non-LeetCode code) → allow all
+            return True
+        return self._solution_line_start <= line_no <= self._solution_line_end
 
     def _check_limits(self) -> bool:
         """Check if execution limits have been exceeded."""
@@ -239,6 +325,55 @@ class ExecutionTracer:
             self._error_type = "recursion_limit"
             return True
         return False
+
+    def _compute_solution_range(self, source: str) -> None:
+        """Scan *source* to find the 1-based line range of 'class Solution:'.
+
+        Sets self._solution_line_start and self._solution_line_end so that
+        the tracer only emits snapshots for lines inside the Solution class
+        body.  If no Solution class is found (free-form code), both fields
+        remain 0 and all lines are visible.
+
+        The range includes the 'class Solution:' header line itself and
+        extends to the last non-empty, indented line belonging to the class.
+        We also include any trailing blank lines so that the final 'return'
+        statement is not clipped.
+        """
+        lines = source.splitlines()
+        class_start = None
+        class_indent = None
+
+        for i, raw_line in enumerate(lines, start=1):
+            stripped = raw_line.lstrip()
+            if stripped.startswith("class Solution") and ":" in stripped:
+                class_start = i
+                # The class header itself is at zero indentation (or whatever
+                # indent it was written at — we track the body indent below).
+                class_indent = len(raw_line) - len(stripped)
+                break
+
+        if class_start is None:
+            # No Solution class — free-form code, trace everything
+            self._solution_line_start = 0
+            self._solution_line_end = 0
+            return
+
+        # Walk forward from the class header to find where the class body ends.
+        # The body ends when we encounter a non-blank line at indent ≤ class_indent
+        # (i.e. a new top-level definition or the wrapper's main() function).
+        class_end = class_start
+        for i, raw_line in enumerate(lines[class_start:], start=class_start + 1):
+            if raw_line.strip() == "":
+                # Blank lines are part of the body — keep going
+                continue
+            current_indent = len(raw_line) - len(raw_line.lstrip())
+            if current_indent <= class_indent:
+                # We've left the class body
+                break
+            class_end = i
+
+        self._solution_line_start = class_start
+        self._solution_line_end = class_end
 
     # Heap serialization helpers
     def _reset_heap(self):
@@ -408,10 +543,19 @@ class ExecutionTracer:
         if self._check_limits():
             self._stop_execution(self._error, self._error_type or "recursion_limit")
 
+        # Skip wrapper boilerplate: don't create a snapshot for calls outside
+        # the user's Solution class body.
+        if not self._is_user_line(filename, line_no):
+            return self.trace_function
+
         return self.trace_function
 
     def _handle_line(self, frame, filename: str, line_no: int):
         """Handle line execution event."""
+        # Skip wrapper boilerplate lines outside the user's Solution class.
+        if not self._is_user_line(filename, line_no):
+            return self.trace_function
+
         # Skip if same line in same file (deduplication)
         if line_no == self._last_line and filename == self._last_filename:
             return self.trace_function
@@ -438,10 +582,11 @@ class ExecutionTracer:
         func_name = self._call_stack[-1]['func_name']
         code = self._get_source_line(line_no)
 
-        # Create return snapshot
-        self._create_snapshot('return', line_no, func_name, filename, code, frame, return_value)
+        # Only create a visible snapshot for returns inside the Solution class.
+        if self._is_user_line(filename, line_no):
+            self._create_snapshot('return', line_no, func_name, filename, code, frame, return_value)
 
-        # Now pop from call stack
+        # Always pop from call stack (regardless of whether we snapshotted).
         self._call_stack.pop()
 
         return self.trace_function
@@ -601,6 +746,11 @@ class ExecutionTracer:
         # Reset stable heap id mapping for this execution
         self._reset_heap()
 
+        # Compute which lines belong to the user's Solution class so the
+        # tracer can skip wrapper boilerplate.  This is a pure text scan
+        # with no side-effects and takes < 1 ms even for large wrappers.
+        self._compute_solution_range(code)
+
         # Compile code
         try:
             compiled_code = compile(code, '<user_code>', 'exec')
@@ -654,6 +804,18 @@ class ExecutionTracer:
                 sys.stdin = old_stdin
 
         execution_time = time.time() - self.start_time
+
+        # ── Patch final stdout onto the last snapshot ──────────────────────
+        # When wrapper boilerplate lines (main(), print(__RESULT__), …) are
+        # filtered from the trace, the print() call that writes __RESULT__
+        # happens after the last user-code snapshot was taken.  That means
+        # the last snapshot's `stdout` field is empty even though execution
+        # succeeded.  We fix this by copying the final accumulated stdout into
+        # the last snapshot so the runner can extract the result marker.
+        if self.snapshots:
+            final_stdout = self.stdout_buffer.getvalue()
+            if final_stdout != self.snapshots[-1].stdout:
+                self.snapshots[-1].stdout = final_stdout
 
         return self.snapshots, self._error, execution_time, self._error_type
 

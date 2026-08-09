@@ -249,7 +249,7 @@ export default function Workspace() {
     setProblemId(pid);
     // Load the canonical starter code into the editor
     if (starterCode) setCode(starterCode);
-    // Reset stale session / replay state so we start fresh
+    // Clear ALL stale execution/trace/result/session state
     setSolutionSessionId(null);
     setReplayTestIdx(null);
     setSolutionVerdict(null);
@@ -259,6 +259,11 @@ export default function Workspace() {
     setTrace([]);
     setRunStatus('idle');
     setRunError('');
+    // Reset these too so the UI reflects a clean slate
+    setExecutionTime(null);
+    setLeetCodeMode(false);
+    setProblemTitle(null);
+    setDemoMode(false);
   }, []);
 
   const handleSelectExample = useCallback((key) => {
@@ -318,6 +323,7 @@ export default function Workspace() {
                     selectedId={problemId}
                     onSelect={(pid, starterCode) => {
                       setProblemId(pid);
+                      if (starterCode) setCode(starterCode);
                       setAmbiguousProblems(null);
                       setSolutionSessionId(null);
                       setReplayTestIdx(null);
