@@ -91,6 +91,7 @@ class ProblemInfo:
     leetcode_number: Optional[int] = None
     slug: str = ""
     topics: list[str] = field(default_factory=list)
+    starter_code: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -103,7 +104,23 @@ class ProblemInfo:
             "leetcode_number": self.leetcode_number,
             "slug": self.slug,
             "topics": self.topics,
+            "starter_code": self.starter_code,
         }
+
+
+def build_starter_code(method_name: str, parameters: list, return_type: str = "Any") -> str:
+    """Generate a canonical LeetCode-style starter code snippet.
+
+    Produces a class Solution with the correct method signature, the standard
+    typing imports needed for List/Optional/etc., and a single ``pass`` body.
+    """
+    params_str = ", ".join(["self"] + list(parameters))
+    combined = params_str + " " + (return_type or "")
+    typing_names = [n for n in ("List", "Optional", "Dict", "Tuple", "Set", "Any") if n in combined]
+    import_line = ("from typing import " + ", ".join(typing_names) + "\n\n") if typing_names else ""
+    rt = return_type or "Any"
+    method_sig = f"    def {method_name}({params_str}) -> {rt}:"
+    return f"{import_line}class Solution:\n{method_sig}\n        pass\n"
 
 
 @dataclass
@@ -307,4 +324,9 @@ class ProblemPlugin(ABC):
             leetcode_number=self.leetcode_number,
             slug=self.slug or self.problem_id,
             topics=list(self.topics),
+            starter_code=build_starter_code(
+                self.method_name,
+                list(self.parameters),
+                self.return_type,
+            ),
         )

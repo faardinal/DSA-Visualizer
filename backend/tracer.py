@@ -692,10 +692,29 @@ def execute_isolated_python(code: str, inputs: str = "", config: Optional[Execut
     execution_config = config or ExecutionConfig()
     worker_payload = json.dumps({"code": code, "inputs": inputs, "config": execution_config.__dict__})
     creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-    worker_environment = {"PYTHONIOENCODING": "utf-8"}
+
+    # ── Determine the project root reliably ───────────────────────────────
+    # tracer.py lives at  <project_root>/backend/tracer.py
+    # so project_root = parent of parent of this file.
+    # We use __file__ (resolved) rather than os.getcwd() so the worker can
+    # always be found regardless of which directory the Flask server was
+    # started from.
+    _this_file = os.path.abspath(__file__)          # …/backend/tracer.py
+    _backend_dir = os.path.dirname(_this_file)      # …/backend
+    _project_root = os.path.dirname(_backend_dir)   # <project_root>
+
+    # Build a clean environment: only what the child strictly needs.
+    # PYTHONPATH must include the project root so that
+    # `python -m backend.execution_engine.sandbox_worker` can find the
+    # `backend` package, regardless of site-packages or user environments.
+    worker_environment = {
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": _project_root,
+    }
+
     process = subprocess.Popen(
         [sys.executable, "-m", "backend.execution_engine.sandbox_worker"],
-        cwd=os.getcwd(),
+        cwd=_project_root,          # always the project root, not os.getcwd()
         env=worker_environment,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,

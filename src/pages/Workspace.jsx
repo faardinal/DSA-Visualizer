@@ -244,6 +244,23 @@ export default function Workspace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trace]);
 
+  const handleSelectProblem = useCallback((pid, starterCode) => {
+    // Set the active problem id so the backend knows which tests to run
+    setProblemId(pid);
+    // Load the canonical starter code into the editor
+    if (starterCode) setCode(starterCode);
+    // Reset stale session / replay state so we start fresh
+    setSolutionSessionId(null);
+    setReplayTestIdx(null);
+    setSolutionVerdict(null);
+    setAmbiguousProblems(null);
+    setTestResults([]);
+    setSolutionStats(null);
+    setTrace([]);
+    setRunStatus('idle');
+    setRunError('');
+  }, []);
+
   const handleSelectExample = useCallback((key) => {
     const example = EXAMPLES.find((e) => e.key === key);
     if (!example) return;
@@ -272,6 +289,8 @@ export default function Workspace() {
         examples={EXAMPLES}
         selectedExample={selectedExample}
         onSelectExample={handleSelectExample}
+        selectedProblemId={problemId}
+        onSelectProblem={handleSelectProblem}
       />
 
       <div className="flex-1 overflow-hidden">
@@ -297,7 +316,13 @@ export default function Workspace() {
                 <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-sidebar/50 shrink-0">
                   <ProblemSelector
                     selectedId={problemId}
-                    onSelect={(pid) => { setProblemId(pid); setAmbiguousProblems(null); setSolutionSessionId(null); setReplayTestIdx(null); setSolutionVerdict(null); }}
+                    onSelect={(pid, starterCode) => {
+                      setProblemId(pid);
+                      setAmbiguousProblems(null);
+                      setSolutionSessionId(null);
+                      setReplayTestIdx(null);
+                      setSolutionVerdict(null);
+                    }}
                   />
                   {problemTitle && (
                     <span className="text-[11px] text-muted-foreground truncate">{problemTitle}</span>
