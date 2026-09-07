@@ -1,7 +1,7 @@
 # DSA Visualizer
 python only for now
 
-Full-stack DSA execution visualizer.
+DSA execution visualizer.
 
 WEB URL: https://visaam.vercel.app/
 
